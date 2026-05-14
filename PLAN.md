@@ -4,16 +4,19 @@
 
 A staging/authoring web app for JADU document pages with **pixel-accurate live
 preview** using the existing UoL design system. Authors draft here, copy the
-generated HTML, and paste it into JADU's CKEditor **Source view**.
+generated HTML, and paste it into JADU's CKEditor Source view.
+
+Deployed as a real web app — code lives in GitHub, Vercel auto-deploys every
+push, accessible from any device behind a password gate.
 
 Eventually extends to a homepage designer.
 
 ## Hard constraints
 
 - **Free**: hosting, database, image hosting, editor, dependencies. Everything.
-- **Local-first**: runs on `localhost` on the author's machine. No deployment,
-  no auth needed for v1. Optional Vercel + password gate later if previews
-  need sharing.
+- **Hosted**: GitHub repo → Vercel auto-deploy → password-gated public URL.
+  Every push to `main` ships to production; every push to a feature branch
+  gets its own Vercel preview URL automatically.
 - **Export target**: HTML pasted into JADU's CKEditor Source view. Output
   HTML must use the exact UoL design system class names so it renders
   correctly on the live site without modification.
@@ -25,20 +28,54 @@ Eventually extends to a homepage designer.
 
 ## Stack
 
-| Layer       | Choice                                          | Free? |
-| ----------- | ----------------------------------------------- | ----- |
-| Framework   | Next.js 15 (App Router)                         | Yes   |
-| DB          | SQLite via `better-sqlite3` (file in repo dir)  | Yes   |
-| ORM         | Drizzle                                         | Yes   |
-| Editor      | TipTap (MIT) with custom nodes per UoL plugin   | Yes   |
-| Admin UI    | Tailwind + shadcn/ui                            | Yes   |
-| Preview CSS | UoL DS stylesheet from `jaducdn.leeds.ac.uk`    | Yes   |
-| Auth        | None for v1 (local only)                        | n/a   |
-| Hosting     | `pnpm dev` on author's machine                  | Yes   |
-| Images      | External URLs only; placeholder fallback        | Yes   |
+| Layer       | Choice                                          | Free tier? |
+| ----------- | ----------------------------------------------- | ---------- |
+| Source      | GitHub repo                                     | Yes        |
+| Framework   | Next.js 15 (App Router)                         | Yes        |
+| Hosting     | Vercel (Hobby plan)                             | Yes        |
+| DB          | Turso (libSQL — SQLite-compatible)              | Yes (9 GB) |
+| ORM         | Drizzle (`@libsql/client` driver)               | Yes        |
+| Editor      | TipTap (MIT) with custom nodes per UoL plugin   | Yes        |
+| Admin UI    | Tailwind + shadcn/ui                            | Yes        |
+| Preview CSS | UoL DS stylesheet from `jaducdn.leeds.ac.uk`    | Yes        |
+| Auth        | Password gate via middleware + signed cookie    | Yes        |
+| Images      | External URLs only; placeholder fallback        | Yes        |
 
-SQLite (single file) over Postgres because local-first means no DB server to
-run. Trivially swappable for Postgres if we deploy later.
+**Why Turso**: SQLite-compatible (so local dev uses a plain `file:./local.db`
+and prod uses `libsql://…` — same code, one env var swap), generous free tier
+(500 DBs, 9 GB storage, 1 B row reads/month — orders of magnitude more than
+we need), works perfectly with Vercel's serverless model.
+
+**Why Vercel**: built by Next.js team, free tier covers our use case
+indefinitely, GitHub integration is one click, every branch gets a preview
+URL — perfect for letting stakeholders see drafts.
+
+## Auth — password gate
+
+A single shared password (no user accounts).
+
+- `CMS_PASSWORD` env var set in Vercel project settings.
+- `middleware.ts` checks for a signed `cms_session` cookie on every
+  `/admin/*` and `/preview/*` request. If missing or invalid, redirect to
+  `/login`.
+- `/login` accepts the password, verifies, sets the cookie (HTTP-only,
+  Secure, SameSite=Lax, ~30-day expiry).
+- Cookie value is a JWT or HMAC-signed token using `AUTH_SECRET` env var.
+
+Total auth code: ~40 lines. No database tables, no email, no recovery flow
+(if you forget the password, change the env var in Vercel).
+
+## Deploy workflow
+
+1. `git push origin main` → Vercel builds + deploys to production URL.
+2. `git push origin feature/xyz` → Vercel builds + deploys to a unique
+   preview URL like `jadu-cms-feature-xyz.vercel.app`. Same password gate,
+   same Turso DB (or a separate "preview" branch DB if we want isolation
+   later — Turso supports DB branching for free).
+3. Env vars live in Vercel project settings: `TURSO_DATABASE_URL`,
+   `TURSO_AUTH_TOKEN`, `CMS_PASSWORD`, `AUTH_SECRET`.
+4. Local dev: `.env.local` overrides with `file:./local.db` and a dev
+   password. Same `pnpm dev` workflow; no production data risk.
 
 ## Data model
 
@@ -62,9 +99,14 @@ Category
   name      text
   slug      text
   parentId  text   -- hierarchy for breadcrumb + section nav
+
+Snippet                -- mirrors JADU's JaduSnippet
+  id        text primary key
+  name      text
+  contentHtml text
 ```
 
-No `User` table for v1.
+No `User` table — single shared password is the entire auth model.
 
 ## Editor — feature parity with JADU
 
@@ -101,11 +143,10 @@ class names so the output is paste-ready.
 | Replace                   | TipTap find-and-replace extension          | n/a                  |
 | JaduContentStatistics     | Word/char count in sidebar                 | n/a                  |
 
-**Discovery step before building**: pull
+**Discovery step before building (Phase 0)**: pull
 `https://jaducdn.leeds.ac.uk/uol-ds/1.0.20/css/style.css` and inspect what
-class names exist for each component (accordion, pull-quote, CTA, video grid,
-etc.). Document the exact markup each renders with. This becomes the spec the
-custom nodes target.
+class names exist for each component. Document the exact markup each
+component renders with. This becomes the spec the custom nodes target.
 
 ## Page renderer
 
@@ -147,11 +188,14 @@ Action bar mirrors JADU's familiar buttons:
 - **Copy HTML** — copies `contentHtml` to clipboard, ready to paste into
   JADU's CKEditor Source view
 - **Open preview in new tab**
+- **Share preview link** — copies the public preview URL (still
+  password-gated, but stakeholders just need the password)
 
 ## Admin shell
 
 | Route                   | Purpose                                       |
 | ----------------------- | --------------------------------------------- |
+| `/login`                | Password entry                                |
 | `/admin`                | Dashboard — recent docs, quick links          |
 | `/admin/docs`           | List view (title, categories, status)         |
 | `/admin/docs/new`       | New doc                                       |
@@ -168,8 +212,10 @@ Action bar mirrors JADU's familiar buttons:
   variants…).
 - Outcome: a `docs/uol-component-map.md` spec the editor nodes target.
 
-**Phase 1 — Skeleton**
-- Next.js + Tailwind + Drizzle + SQLite scaffold.
+**Phase 1 — Skeleton + deploy**
+- Next.js + Tailwind + Drizzle + Turso scaffold.
+- Push to GitHub, connect to Vercel, verify auto-deploy works.
+- Password gate middleware + `/login` page — live before we add any data.
 - `Document` CRUD with title + plain textarea content.
 - `/preview/[slug]` renders with UoL CSS and static chrome.
 
@@ -184,6 +230,8 @@ Action bar mirrors JADU's familiar buttons:
   Leeds Image (with caption), Abbreviation, Language, Snippet, Time/Date,
   Anchor.
 - Each emits HTML matching the UoL DS spec from Phase 0.
+- Each PR gets a Vercel preview URL — eyeball the rendered component before
+  merging.
 
 **Phase 4 — Page chrome + supplements**
 - All chrome components (masthead, local nav, section nav, breadcrumb, footer).
@@ -195,6 +243,7 @@ Action bar mirrors JADU's familiar buttons:
 - Doc list filters (status, category) matching JADU's UI.
 - Auto-save.
 - Snippets library page.
+- "Share preview link" button.
 
 ## Future: homepage designer
 
@@ -202,17 +251,6 @@ Block-based editor — drag rows of UoL DS components (hero, card grid, CTA
 strip, accordion) into a page. Each block is a React component with its own
 props schema; stored as `blocksJson` on a `Homepage` record. Reuses the same
 preview renderer and chrome.
-
-## Free-tier upgrade path (if we ever deploy)
-
-If we decide to share previews with stakeholders later:
-- **Hosting**: Vercel free tier (Next.js native).
-- **DB**: swap SQLite for Neon Postgres free tier (Drizzle makes this a
-  one-line driver change).
-- **Auth**: middleware password gate using `CMS_PASSWORD` env var + a
-  signed cookie. No user database needed.
-- **Images**: stay with external URLs; if we ever need uploads, Cloudflare R2
-  free tier (10 GB, no egress) is the cheapest option.
 
 ## Open questions
 
@@ -224,3 +262,6 @@ If we decide to share previews with stakeholders later:
 3. **Multiple pages workflow** — do you typically work on one page at a time,
    or hop between several? (Affects whether we need draft management /
    tabs / multi-doc autosave.)
+4. **Preview sharing** — should the password gate allow time-limited share
+   links (so stakeholders don't need the master password), or is one shared
+   password fine?
