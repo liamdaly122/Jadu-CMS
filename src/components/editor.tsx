@@ -17,7 +17,6 @@ import {
   Image as ImageIcon,
   Megaphone,
   Phone,
-  TextQuote,
   ChevronsUpDown,
   Anchor as AnchorIcon,
   Calendar,
@@ -310,15 +309,8 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
 
       <ToolbarDivider />
 
-      <ToolbarButton
-        title="Blockquote"
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        active={editor.isActive("blockquote")}
-      >
-        <Quote size={16} />
-      </ToolbarButton>
       <ToolbarButton title="Pull quote with attribution" onClick={insertPullQuote}>
-        <TextQuote size={16} />
+        <Quote size={16} />
       </ToolbarButton>
       <ToolbarButton title="Accordion" onClick={insertAccordion}>
         <ChevronsUpDown size={16} />

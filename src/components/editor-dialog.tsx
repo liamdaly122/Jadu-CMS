@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 
 export type FieldDef = {
   name: string;
@@ -28,20 +29,23 @@ export function openDialog(config: DialogConfig) {
 
 export function EditorDialogHost() {
   const [config, setConfig] = useState<DialogConfig | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     opener = setConfig;
     return () => {
       opener = null;
     };
   }, []);
 
-  if (!config) return null;
+  if (!config || !mounted) return null;
 
   const handleClose = () => setConfig(null);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     const fd = new FormData(e.currentTarget);
     const values: Record<string, string> = {};
     for (const f of config.fields) {
@@ -51,7 +55,7 @@ export function EditorDialogHost() {
     handleClose();
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={handleClose}
@@ -63,7 +67,11 @@ export function EditorDialogHost() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">{config.title}</h2>
           {config.fields.map((f) => (
-            <Field key={f.name} field={f} initial={config.initial?.[f.name] ?? ""} />
+            <Field
+              key={f.name}
+              field={f}
+              initial={config.initial?.[f.name] ?? ""}
+            />
           ))}
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -82,7 +90,8 @@ export function EditorDialogHost() {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
