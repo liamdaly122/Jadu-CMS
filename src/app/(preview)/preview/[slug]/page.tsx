@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { db, documents } from "@/db";
-import { eq } from "drizzle-orm";
+import { db, documents, categories } from "@/db";
+import { and, asc, eq, ne } from "drizzle-orm";
 import {
   Breadcrumb,
   FeaturedImage,
@@ -9,6 +9,7 @@ import {
   RelatedContent,
   RelatedLinks,
   RichTextContent,
+  SectionNav,
 } from "@/lib/uol-chrome";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +28,49 @@ export default async function PreviewPage({
 
   if (!doc) notFound();
 
+  const [category] = doc.categoryId
+    ? await db
+        .select()
+        .from(categories)
+        .where(eq(categories.id, doc.categoryId))
+        .limit(1)
+    : [];
+
+  const siblings = doc.categoryId
+    ? await db
+        .select({
+          id: documents.id,
+          title: documents.title,
+          slug: documents.slug,
+        })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.categoryId, doc.categoryId),
+            ne(documents.id, doc.id)
+          )
+        )
+        .orderBy(asc(documents.title))
+    : [];
+
+  const sectionItems = category
+    ? [
+        { title: doc.title, slug: doc.slug, isCurrent: true },
+        ...siblings.map((s) => ({
+          title: s.title,
+          slug: s.slug,
+          isCurrent: false,
+        })),
+      ]
+    : [];
+
   return (
     <PageShell>
+      {category && (
+        <SectionNav sectionTitle={category.name} items={sectionItems} />
+      )}
       <div className="uol-content-container uol-main-container">
-        <Breadcrumb title={doc.title} />
+        <Breadcrumb category={category?.name} title={doc.title} />
         <div className="uol-col-container uol-page-container">
           <div className="uol-side-nav-container"></div>
           <main id="main" tabIndex={-1} className="uol-page">

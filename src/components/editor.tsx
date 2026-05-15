@@ -3,6 +3,7 @@
 import { useEditor, EditorContent, type Editor as TipTapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import CharacterCount from "@tiptap/extension-character-count";
 import {
   Bold,
   Italic,
@@ -22,8 +23,9 @@ import {
   Anchor as AnchorIcon,
   Calendar,
   Languages,
+  Code2,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { PullQuote } from "./editor-nodes/pull-quote";
 import { UolBlockQuote } from "./editor-nodes/block-quote";
@@ -55,6 +57,9 @@ type Props = {
 };
 
 export function Editor({ value, onChange }: Props) {
+  const [sourceMode, setSourceMode] = useState(false);
+  const [sourceDraft, setSourceDraft] = useState(value);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -75,6 +80,7 @@ export function Editor({ value, onChange }: Props) {
       Language,
       Anchor,
       TimeElement,
+      CharacterCount,
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -99,18 +105,60 @@ export function Editor({ value, onChange }: Props) {
     );
   }
 
+  const toggleSource = () => {
+    if (sourceMode) {
+      // Switching back to rich mode: commit the textarea changes.
+      editor.commands.setContent(sourceDraft);
+      setSourceMode(false);
+    } else {
+      setSourceDraft(editor.getHTML());
+      setSourceMode(true);
+    }
+  };
+
+  const characters = editor.storage.characterCount?.characters?.() ?? 0;
+  const words = editor.storage.characterCount?.words?.() ?? 0;
+
   return (
     <>
       <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950">
-        <Toolbar editor={editor} />
-        <EditorContent editor={editor} />
+        <Toolbar
+          editor={editor}
+          sourceMode={sourceMode}
+          toggleSource={toggleSource}
+        />
+        {sourceMode ? (
+          <textarea
+            value={sourceDraft}
+            onChange={(e) => setSourceDraft(e.target.value)}
+            className="min-h-[400px] w-full p-4 text-sm font-mono focus:outline-none bg-white dark:bg-slate-950"
+            spellCheck={false}
+          />
+        ) : (
+          <EditorContent editor={editor} />
+        )}
+        <div className="border-t border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs text-slate-500 flex justify-between">
+          <span>
+            {sourceMode
+              ? "Editing HTML source"
+              : `${words} word${words === 1 ? "" : "s"} · ${characters} character${characters === 1 ? "" : "s"}`}
+          </span>
+        </div>
       </div>
       <EditorDialogHost />
     </>
   );
 }
 
-function Toolbar({ editor }: { editor: TipTapEditor }) {
+function Toolbar({
+  editor,
+  sourceMode,
+  toggleSource,
+}: {
+  editor: TipTapEditor;
+  sourceMode: boolean;
+  toggleSource: () => void;
+}) {
   const setLink = useCallback(() => {
     const prev = (editor.getAttributes("link").href ?? "") as string;
     openDialog(
@@ -269,6 +317,23 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
     return "p";
   })();
 
+  if (sourceMode) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5">
+        <span className="px-2 text-xs font-medium uppercase tracking-wider text-slate-500">
+          HTML source
+        </span>
+        <ToolbarButton
+          title="Back to rich editor"
+          onClick={toggleSource}
+          active
+        >
+          <Code2 size={16} />
+        </ToolbarButton>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5">
       <ToolbarButton
@@ -393,16 +458,26 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
       <ToolbarButton
         title="Undo (Ctrl+Z)"
         onClick={() => editor.chain().focus().undo().run()}
-        disabled={!editor.can().undo()}
+        disabled={!editor.can().undo() || sourceMode}
       >
         <Undo size={16} />
       </ToolbarButton>
       <ToolbarButton
         title="Redo (Ctrl+Shift+Z)"
         onClick={() => editor.chain().focus().redo().run()}
-        disabled={!editor.can().redo()}
+        disabled={!editor.can().redo() || sourceMode}
       >
         <Redo size={16} />
+      </ToolbarButton>
+
+      <ToolbarDivider />
+
+      <ToolbarButton
+        title={sourceMode ? "Back to rich editor" : "View HTML source"}
+        onClick={toggleSource}
+        active={sourceMode}
+      >
+        <Code2 size={16} />
       </ToolbarButton>
     </div>
   );

@@ -9,7 +9,55 @@ export function SiteFooter() {
   return <div dangerouslySetInnerHTML={{ __html: FOOTER_HTML }} />;
 }
 
-export function Breadcrumb({ title }: { title: string }) {
+type SectionNavItem = {
+  title: string;
+  slug: string;
+  isCurrent: boolean;
+};
+
+export function SectionNav({
+  sectionTitle,
+  items,
+}: {
+  sectionTitle: string;
+  items: SectionNavItem[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <nav className="uol-section-nav" aria-label="Section navigation">
+      <h2 className="uol-section-nav__title">
+        <span className="uol-section-nav__title__intro">In this section</span>
+        <span className="uol-section-nav__title__text">{sectionTitle}</span>
+      </h2>
+      <ul className="uol-section-nav__list">
+        {items.map((it) => (
+          <li
+            key={it.slug}
+            className={`uol-section-nav__item${
+              it.isCurrent ? " uol-section-nav__item--current" : ""
+            }`}
+          >
+            <a
+              className="uol-section-nav__link"
+              href={`/preview/${it.slug}`}
+              aria-current={it.isCurrent ? "page" : undefined}
+            >
+              <span className="uol-section-nav__item__label">{it.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+export function Breadcrumb({
+  category,
+  title,
+}: {
+  category?: string;
+  title: string;
+}) {
   return (
     <nav aria-label="Breadcrumb" className="uol-breadcrumb">
       <ol className="uol-breadcrumb__list">
@@ -18,6 +66,11 @@ export function Breadcrumb({ title }: { title: string }) {
             Home
           </a>
         </li>
+        {category && (
+          <li className="uol-breadcrumb__item">
+            <span className="uol-breadcrumb__link">{category}</span>
+          </li>
+        )}
         <li className="uol-breadcrumb__item">
           <span className="uol-breadcrumb__link" aria-current="page">
             {title}

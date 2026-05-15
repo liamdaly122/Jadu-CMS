@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { Editor } from "./editor";
 import { CopyHtmlButton } from "./copy-html-button";
+import {
+  RelatedLinksEditor,
+  RelatedContentEditor,
+} from "./related-items-editor";
 import type { Document, Category } from "@/db";
 
 type Props = {
@@ -14,9 +18,15 @@ type Props = {
 
 export function DocForm({ doc, cats, action, submitLabel = "Save" }: Props) {
   const [html, setHtml] = useState(doc?.contentHtml ?? "");
+  const [relatedLinks, setRelatedLinks] = useState(doc?.relatedLinks ?? []);
+  const [relatedContent, setRelatedContent] = useState(
+    doc?.relatedContent ?? []
+  );
 
   const submit = async (formData: FormData) => {
     formData.set("contentHtml", html);
+    formData.set("relatedLinks", JSON.stringify(relatedLinks));
+    formData.set("relatedContent", JSON.stringify(relatedContent));
     await action(formData);
   };
 
@@ -133,6 +143,30 @@ export function DocForm({ doc, cats, action, submitLabel = "Save" }: Props) {
           </select>
         </div>
       </div>
+
+      <details className="rounded-md border border-slate-200 dark:border-slate-800">
+        <summary className="cursor-pointer px-4 py-2 text-sm font-medium">
+          Related links
+        </summary>
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+          <RelatedLinksEditor
+            items={relatedLinks}
+            onChange={setRelatedLinks}
+          />
+        </div>
+      </details>
+
+      <details className="rounded-md border border-slate-200 dark:border-slate-800">
+        <summary className="cursor-pointer px-4 py-2 text-sm font-medium">
+          Related content
+        </summary>
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+          <RelatedContentEditor
+            items={relatedContent}
+            onChange={setRelatedContent}
+          />
+        </div>
+      </details>
 
       <details className="rounded-md border border-slate-200 dark:border-slate-800">
         <summary className="cursor-pointer px-4 py-2 text-sm font-medium">
