@@ -2,13 +2,27 @@ import { Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { PullQuoteView } from "./pull-quote-view";
 
+type PullQuoteAlign = "left" | "right" | "center";
+
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pullQuote: {
-      insertPullQuote: (attrs: { quote: string }) => ReturnType;
-      updatePullQuote: (attrs: { quote: string }) => ReturnType;
+      insertPullQuote: (attrs: {
+        quote: string;
+        align?: PullQuoteAlign;
+      }) => ReturnType;
+      updatePullQuote: (attrs: {
+        quote: string;
+        align?: PullQuoteAlign;
+      }) => ReturnType;
     };
   }
+}
+
+function readAlign(el: HTMLElement): PullQuoteAlign {
+  if (el.classList.contains("uol-typography-pull-quote--right")) return "right";
+  if (el.classList.contains("uol-typography-pull-quote--center")) return "center";
+  return "left";
 }
 
 export const PullQuote = Node.create({
@@ -20,6 +34,7 @@ export const PullQuote = Node.create({
   addAttributes() {
     return {
       quote: { default: "" },
+      align: { default: "left" as PullQuoteAlign },
     };
   },
 
@@ -30,19 +45,25 @@ export const PullQuote = Node.create({
         getAttrs: (el) => {
           const node = el as HTMLElement;
           const p = node.querySelector("p");
-          return { quote: p?.textContent ?? "" };
+          return {
+            quote: p?.textContent ?? "",
+            align: readAlign(node),
+          };
         },
       },
     ];
   },
 
   renderHTML({ node }) {
-    const { quote } = node.attrs as { quote: string };
+    const { quote, align } = node.attrs as {
+      quote: string;
+      align: PullQuoteAlign;
+    };
     return [
       "div",
       {
         "aria-hidden": "true",
-        class: "uol-typography-pull-quote uol-typography-pull-quote--left",
+        class: `uol-typography-pull-quote uol-typography-pull-quote--${align}`,
       },
       ["p", quote],
     ];

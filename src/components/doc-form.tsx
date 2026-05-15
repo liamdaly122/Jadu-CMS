@@ -46,7 +46,6 @@ export function DocForm({
 
   const persist = async () => {
     if (!formRef.current) return;
-    dirtyAt.current = 0;
     const { html, relatedLinks, relatedContent, action } = stateRef.current;
     const fd = new FormData(formRef.current);
     fd.set("contentHtml", html);
@@ -55,6 +54,9 @@ export function DocForm({
     setStatus("saving");
     try {
       await action(fd);
+      // Only clear the dirty flag on success. If the action threw, dirtyAt
+      // stays > 0 so the next autosave tick retries.
+      dirtyAt.current = 0;
       setStatus("saved");
     } catch {
       setStatus("error");
@@ -181,6 +183,17 @@ export function DocForm({
           <CopyHtmlButton html={html} />
         </div>
         <Editor value={html} onChange={setHtml} />
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="withLead"
+            defaultChecked={doc?.withLead ?? true}
+            className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
+          />
+          <span>
+            Style the first paragraph as a lead (larger intro text)
+          </span>
+        </label>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

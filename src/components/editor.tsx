@@ -366,7 +366,14 @@ function Toolbar({
   const insertPullQuote = useCallback(() => {
     openDialog(
       pullQuoteDialog({}, (values) =>
-        editor.chain().focus().insertPullQuote({ quote: values.quote }).run()
+        editor
+          .chain()
+          .focus()
+          .insertPullQuote({
+            quote: values.quote,
+            align: (values.align as "left" | "right" | "center") ?? "left",
+          })
+          .run()
       )
     );
   }, [editor]);

@@ -8,6 +8,13 @@
       "when": 1778773971221,
       "tag": "0000_sad_hawkeye",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778865533287,
+      "tag": "0001_special_random",
+      "breakpoints": true
     }
   ]
 }

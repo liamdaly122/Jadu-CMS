@@ -125,6 +125,11 @@ body {
   border-right: 4px solid rgb(220 38 38);
   text-align: right;
 }
+.prose-editor .uol-typography-pull-quote--center {
+  border-left: none;
+  border-top: 4px solid rgb(220 38 38);
+  text-align: center;
+}
 .prose-editor .uol-rich-text__figure {
   margin: 1em 0;
   display: flex;

@@ -91,7 +91,10 @@ export default async function PreviewPage({
                 url={doc.featuredImageUrl}
                 alt={doc.featuredImageAlt}
               />
-              <RichTextContent html={doc.contentHtml ?? ""} />
+              <RichTextContent
+                html={doc.contentHtml ?? ""}
+                withLead={doc.withLead}
+              />
               <RelatedLinks items={doc.relatedLinks} />
               <RelatedContent items={doc.relatedContent} />
             </div>

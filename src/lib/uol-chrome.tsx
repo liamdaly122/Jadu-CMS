@@ -106,12 +106,18 @@ export function FeaturedImage({
   );
 }
 
-export function RichTextContent({ html }: { html: string }) {
+export function RichTextContent({
+  html,
+  withLead = true,
+}: {
+  html: string;
+  withLead?: boolean;
+}) {
+  const className = withLead
+    ? "uol-rich-text uol-rich-text--with-lead"
+    : "uol-rich-text";
   return (
-    <div
-      className="uol-rich-text uol-rich-text--with-lead"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
   );
 }
 

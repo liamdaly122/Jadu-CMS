@@ -5,6 +5,8 @@ import { NodeWrapper } from "./node-wrapper";
 import { openDialog } from "../editor-dialog";
 import { pullQuoteDialog } from "./dialogs";
 
+type Align = "left" | "right" | "center";
+
 export function PullQuoteView({
   node,
   updateAttributes,
@@ -12,11 +14,18 @@ export function PullQuoteView({
   editor,
   getPos,
 }: NodeViewProps) {
+  const quote = (node.attrs.quote ?? "") as string;
+  const align = (node.attrs.align ?? "left") as Align;
+
   const onEdit = () =>
     openDialog(
       pullQuoteDialog(
-        { quote: node.attrs.quote },
-        (values) => updateAttributes({ quote: values.quote }),
+        { quote, align },
+        (values) =>
+          updateAttributes({
+            quote: values.quote,
+            align: (values.align as Align) ?? "left",
+          }),
         "Save"
       )
     );
@@ -43,9 +52,9 @@ export function PullQuoteView({
     >
       <div
         aria-hidden="true"
-        className="uol-typography-pull-quote uol-typography-pull-quote--left"
+        className={`uol-typography-pull-quote uol-typography-pull-quote--${align}`}
       >
-        <p>{node.attrs.quote || <em>Empty quote</em>}</p>
+        <p>{quote || <em>Empty quote</em>}</p>
       </div>
     </NodeWrapper>
   );

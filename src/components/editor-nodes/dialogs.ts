@@ -1,7 +1,7 @@
 import type { DialogConfig } from "../editor-dialog";
 
 export function pullQuoteDialog(
-  initial: { quote?: string },
+  initial: { quote?: string; align?: string },
   onSubmit: (values: Record<string, string>) => void,
   submitLabel = "Insert"
 ): DialogConfig {
@@ -17,8 +17,21 @@ export function pullQuoteDialog(
         placeholder: "A short, attention-grabbing statement…",
         help: "Pulls a key sentence out of the page and styles it for emphasis. For a quote with attribution use Block quote instead.",
       },
+      {
+        name: "align",
+        label: "Alignment",
+        type: "select",
+        options: [
+          { label: "Left", value: "left" },
+          { label: "Right", value: "right" },
+          { label: "Centre", value: "center" },
+        ],
+      },
     ],
-    initial: { quote: initial.quote ?? "" },
+    initial: {
+      quote: initial.quote ?? "",
+      align: initial.align ?? "left",
+    },
     onSubmit,
   };
 }
