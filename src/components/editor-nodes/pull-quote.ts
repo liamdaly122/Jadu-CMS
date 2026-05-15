@@ -1,9 +1,12 @@
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Node } from "@tiptap/core";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { PullQuoteView } from "./pull-quote-view";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pullQuote: {
-      setPullQuote: (attrs?: { align?: "left" | "right" }) => ReturnType;
+      insertPullQuote: (attrs: { quote: string; author?: string }) => ReturnType;
+      updatePullQuote: (attrs: { quote: string; author?: string }) => ReturnType;
     };
   }
 }
@@ -11,44 +14,69 @@ declare module "@tiptap/core" {
 export const PullQuote = Node.create({
   name: "pullQuote",
   group: "block",
-  content: "inline*",
-  defining: true,
+  atom: true,
+  draggable: true,
 
   addAttributes() {
     return {
-      align: {
-        default: "left",
-        parseHTML: (el) =>
-          el.classList.contains("uol-typography-pull-quote--right")
-            ? "right"
-            : "left",
-        renderHTML: () => ({}),
-      },
+      quote: { default: "" },
+      author: { default: "" },
     };
   },
 
   parseHTML() {
-    return [{ tag: "div.uol-typography-pull-quote" }];
+    return [
+      {
+        tag: "div.uol-typography-pull-quote",
+        getAttrs: (el) => {
+          const node = el as HTMLElement;
+          const p = node.querySelector("p");
+          const cite = node.querySelector("cite");
+          return {
+            quote: p?.textContent ?? "",
+            author: cite?.textContent?.replace(/^—\s*/, "") ?? "",
+          };
+        },
+      },
+    ];
   },
 
-  renderHTML({ node, HTMLAttributes }) {
-    const align = node.attrs.align === "right" ? "right" : "left";
+  renderHTML({ node }) {
+    const { quote, author } = node.attrs as { quote: string; author: string };
+    const children: (string | Record<string, string> | unknown[])[] = [
+      ["p", quote],
+    ];
+    if (author) {
+      children.push([
+        "footer",
+        { class: "uol-pull-quote__footer" },
+        ["cite", `— ${author}`],
+      ]);
+    }
     return [
       "div",
-      mergeAttributes(HTMLAttributes, {
+      {
         "aria-hidden": "true",
-        class: `uol-typography-pull-quote uol-typography-pull-quote--${align}`,
-      }),
-      ["p", 0],
+        class: "uol-typography-pull-quote uol-typography-pull-quote--left",
+      },
+      ...children,
     ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(PullQuoteView);
   },
 
   addCommands() {
     return {
-      setPullQuote:
+      insertPullQuote:
         (attrs) =>
         ({ commands }) =>
-          commands.setNode(this.name, attrs ?? {}),
+          commands.insertContent({ type: this.name, attrs }),
+      updatePullQuote:
+        (attrs) =>
+        ({ commands }) =>
+          commands.updateAttributes(this.name, attrs),
     };
   },
 });

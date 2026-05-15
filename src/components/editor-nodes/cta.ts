@@ -1,9 +1,11 @@
 import { Node } from "@tiptap/core";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { CtaView } from "./cta-view";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     cta: {
-      setCta: (attrs: {
+      insertCta: (attrs: {
         title: string;
         url: string;
         text: string;
@@ -81,15 +83,16 @@ export const Cta = Node.create({
     ];
   },
 
+  addNodeView() {
+    return ReactNodeViewRenderer(CtaView);
+  },
+
   addCommands() {
     return {
-      setCta:
+      insertCta:
         (attrs) =>
         ({ commands }) =>
-          commands.insertContent({
-            type: this.name,
-            attrs,
-          }),
+          commands.insertContent({ type: this.name, attrs }),
     };
   },
 });

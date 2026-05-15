@@ -18,6 +18,10 @@ import {
   Megaphone,
   Phone,
   TextQuote,
+  ChevronsUpDown,
+  Anchor as AnchorIcon,
+  Calendar,
+  Languages,
 } from "lucide-react";
 import { useCallback } from "react";
 
@@ -25,6 +29,23 @@ import { PullQuote } from "./editor-nodes/pull-quote";
 import { LeedsImage } from "./editor-nodes/leeds-image";
 import { Cta } from "./editor-nodes/cta";
 import { Abbreviation } from "./editor-nodes/abbreviation";
+import { Accordion } from "./editor-nodes/accordion";
+import { Language } from "./editor-nodes/language";
+import { Anchor } from "./editor-nodes/anchor";
+import { TimeElement } from "./editor-nodes/time-element";
+import { EditorDialogHost, openDialog } from "./editor-dialog";
+import {
+  pullQuoteDialog,
+  leedsImageDialog,
+  ctaDialog,
+  accordionDialog,
+  linkDialog,
+  telLinkDialog,
+  abbreviationDialog,
+  languageDialog,
+  anchorDialog,
+  timeDialog,
+} from "./editor-nodes/dialogs";
 
 type Props = {
   value: string;
@@ -47,6 +68,10 @@ export function Editor({ value, onChange }: Props) {
       LeedsImage,
       Cta,
       Abbreviation,
+      Accordion,
+      Language,
+      Anchor,
+      TimeElement,
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -72,68 +97,149 @@ export function Editor({ value, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950">
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
-    </div>
+    <>
+      <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950">
+        <Toolbar editor={editor} />
+        <EditorContent editor={editor} />
+      </div>
+      <EditorDialogHost />
+    </>
   );
 }
 
 function Toolbar({ editor }: { editor: TipTapEditor }) {
   const setLink = useCallback(() => {
-    const prev = editor.getAttributes("link").href ?? "";
-    const url = window.prompt("URL (leave empty to remove)", prev);
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    const prev = (editor.getAttributes("link").href ?? "") as string;
+    openDialog(
+      linkDialog({ href: prev }, (values) => {
+        const href = values.href.trim();
+        if (!href) {
+          editor.chain().focus().extendMarkRange("link").unsetLink().run();
+          return;
+        }
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange("link")
+          .setLink({ href })
+          .run();
+      }, prev ? "Save" : "Insert")
+    );
   }, [editor]);
 
   const setTelLink = useCallback(() => {
-    const phone = window.prompt(
-      "Phone number (digits and + only, no spaces)",
-      ""
+    openDialog(
+      telLinkDialog({}, (values) => {
+        const cleaned = values.phone.replace(/[^0-9+]/g, "");
+        if (!cleaned) return;
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange("link")
+          .setLink({ href: `tel:${cleaned}` })
+          .run();
+      })
     );
-    if (!phone) return;
-    const cleaned = phone.replace(/[^0-9+]/g, "");
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: `tel:${cleaned}` })
-      .run();
   }, [editor]);
 
   const setAbbr = useCallback(() => {
-    const prev = editor.getAttributes("abbreviation").title ?? "";
-    const title = window.prompt(
-      "Full term (e.g. 'University of Leeds' for 'UoL'). Empty to remove.",
-      prev
+    const prev = (editor.getAttributes("abbreviation").title ?? "") as string;
+    openDialog(
+      abbreviationDialog({ title: prev }, (values) => {
+        const title = values.title.trim();
+        if (!title) {
+          editor.chain().focus().unsetAbbreviation().run();
+          return;
+        }
+        editor.chain().focus().setAbbreviation({ title }).run();
+      })
     );
-    if (title === null) return;
-    if (title === "") {
-      editor.chain().focus().unsetAbbreviation().run();
-      return;
-    }
-    editor.chain().focus().setAbbreviation({ title }).run();
+  }, [editor]);
+
+  const setLanguage = useCallback(() => {
+    const prev = (editor.getAttributes("language").lang ?? "") as string;
+    openDialog(
+      languageDialog({ lang: prev }, (values) => {
+        const lang = values.lang.trim();
+        if (!lang) {
+          editor.chain().focus().unsetLanguage().run();
+          return;
+        }
+        editor.chain().focus().setLanguage({ lang }).run();
+      })
+    );
   }, [editor]);
 
   const insertLeedsImage = useCallback(() => {
-    const src = window.prompt("Image URL", "");
-    if (!src) return;
-    const alt = window.prompt("Alt text (describe the image)", "") ?? "";
-    const caption = window.prompt("Caption (optional)", "") ?? "";
-    editor.chain().focus().setLeedsImage({ src, alt, caption }).run();
+    openDialog(
+      leedsImageDialog({}, (values) =>
+        editor
+          .chain()
+          .focus()
+          .insertLeedsImage({
+            src: values.src,
+            alt: values.alt,
+            caption: values.caption,
+          })
+          .run()
+      )
+    );
   }, [editor]);
 
   const insertCta = useCallback(() => {
-    const title = window.prompt("CTA heading", "");
-    if (!title) return;
-    const url = window.prompt("Link URL", "") ?? "#";
-    const text = window.prompt("Description text", "") ?? "";
-    editor.chain().focus().setCta({ title, url, text }).run();
+    openDialog(
+      ctaDialog({}, (values) =>
+        editor
+          .chain()
+          .focus()
+          .insertCta({
+            title: values.title,
+            url: values.url,
+            text: values.text,
+          })
+          .run()
+      )
+    );
+  }, [editor]);
+
+  const insertPullQuote = useCallback(() => {
+    openDialog(
+      pullQuoteDialog({}, (values) =>
+        editor
+          .chain()
+          .focus()
+          .insertPullQuote({ quote: values.quote, author: values.author })
+          .run()
+      )
+    );
+  }, [editor]);
+
+  const insertAccordion = useCallback(() => {
+    openDialog(
+      accordionDialog({}, (values) =>
+        editor.chain().focus().insertAccordion({ title: values.title }).run()
+      )
+    );
+  }, [editor]);
+
+  const insertAnchor = useCallback(() => {
+    openDialog(
+      anchorDialog({}, (values) =>
+        editor.chain().focus().insertAnchor({ id: values.id }).run()
+      )
+    );
+  }, [editor]);
+
+  const insertTime = useCallback(() => {
+    openDialog(
+      timeDialog({}, (values) =>
+        editor
+          .chain()
+          .focus()
+          .insertTime({ datetime: values.datetime, display: values.display })
+          .run()
+      )
+    );
   }, [editor]);
 
   const setHeading = (v: string) => {
@@ -146,7 +252,6 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
   };
 
   const currentBlock = (() => {
-    if (editor.isActive("pullQuote")) return "pullQuote";
     for (const l of [2, 3, 4, 5, 6]) {
       if (editor.isActive("heading", { level: l })) return `h${l}`;
     }
@@ -173,7 +278,7 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
       <ToolbarDivider />
 
       <select
-        value={currentBlock === "pullQuote" ? "p" : currentBlock}
+        value={currentBlock}
         onChange={(e) => setHeading(e.target.value)}
         className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         title="Format"
@@ -212,12 +317,11 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
       >
         <Quote size={16} />
       </ToolbarButton>
-      <ToolbarButton
-        title="Pull quote (UoL style)"
-        onClick={() => editor.chain().focus().setPullQuote().run()}
-        active={editor.isActive("pullQuote")}
-      >
+      <ToolbarButton title="Pull quote with attribution" onClick={insertPullQuote}>
         <TextQuote size={16} />
+      </ToolbarButton>
+      <ToolbarButton title="Accordion" onClick={insertAccordion}>
+        <ChevronsUpDown size={16} />
       </ToolbarButton>
       <ToolbarButton
         title="Horizontal rule"
@@ -228,11 +332,14 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
 
       <ToolbarDivider />
 
-      <ToolbarButton title="Add or edit link" onClick={setLink} active={editor.isActive("link")}>
+      <ToolbarButton title="Link" onClick={setLink} active={editor.isActive("link")}>
         <LinkIcon size={16} />
       </ToolbarButton>
-      <ToolbarButton title="Phone link (tel:)" onClick={setTelLink}>
+      <ToolbarButton title="Phone link" onClick={setTelLink}>
         <Phone size={16} />
+      </ToolbarButton>
+      <ToolbarButton title="Anchor (jump target)" onClick={insertAnchor}>
+        <AnchorIcon size={16} />
       </ToolbarButton>
       <ToolbarButton
         title="Remove link"
@@ -244,11 +351,14 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
 
       <ToolbarDivider />
 
-      <ToolbarButton title="Insert image" onClick={insertLeedsImage}>
+      <ToolbarButton title="Image" onClick={insertLeedsImage}>
         <ImageIcon size={16} />
       </ToolbarButton>
-      <ToolbarButton title="Insert call to action" onClick={insertCta}>
+      <ToolbarButton title="Call to action" onClick={insertCta}>
         <Megaphone size={16} />
+      </ToolbarButton>
+      <ToolbarButton title="Date" onClick={insertTime}>
+        <Calendar size={16} />
       </ToolbarButton>
       <ToolbarButton
         title="Abbreviation"
@@ -256,6 +366,13 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
         active={editor.isActive("abbreviation")}
       >
         <span className="text-[11px] font-bold tracking-wider">ABBR</span>
+      </ToolbarButton>
+      <ToolbarButton
+        title="Language tag"
+        onClick={setLanguage}
+        active={editor.isActive("language")}
+      >
+        <Languages size={16} />
       </ToolbarButton>
 
       <ToolbarDivider />
