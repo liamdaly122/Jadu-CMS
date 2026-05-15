@@ -6,56 +6,57 @@ HTML, paste into JADU's CKEditor Source view.
 
 See `PLAN.md` and `docs/uol-component-map.md` for the full design.
 
-## Local development
+## Deploy as a web app (no terminal needed)
 
-```bash
-pnpm install
-cp .env.example .env.local
-pnpm db:generate            # generate the initial migration
-pnpm db:migrate             # apply it to local SQLite
-pnpm dev
+The whole setup happens in your browser — no Node, no pnpm, nothing installed
+on your laptop. Open Chrome and:
+
+### 1. Create a free Turso database
+
+1. Go to <https://app.turso.tech> and sign up (GitHub login is fastest).
+2. Click **Create Database** → give it any name → pick the closest region.
+3. On the database page, copy:
+   - **Database URL** (looks like `libsql://yourname-yourorg.turso.io`)
+   - **Auth Token** — click "Create Token", copy the value.
+
+### 2. Make an `AUTH_SECRET`
+
+We need a 32-byte random string for signing the login cookie. Easiest way:
+in Chrome, press <kbd>F12</kbd> to open DevTools, click the **Console** tab,
+paste this and press Enter:
+
+```js
+crypto.getRandomValues(new Uint8Array(32)).reduce((a,b)=>a+b.toString(16).padStart(2,'0'),'')
 ```
 
-Open <http://localhost:3000> and sign in with the password from `.env.local`
-(default: `changeme`).
+Copy the long hex string it prints.
 
-The app uses a local SQLite file at `./local.db` by default. No Turso or
-Postgres needed for dev.
+### 3. Deploy to Vercel
 
-## Deploying to Vercel + Turso (free tiers)
+1. Go to <https://vercel.com/signup> and sign in with GitHub.
+2. Click **Add New… → Project**, find this repo, click **Import**.
+3. Under **Environment Variables**, add these four:
 
-1. **Create a Turso DB**
-   - Sign up at <https://app.turso.tech>.
-   - Create a database. Copy the URL (`libsql://…`) and an auth token.
+   | Name                  | Value                                                |
+   | --------------------- | ---------------------------------------------------- |
+   | `DATABASE_URL`        | the Turso URL from step 1                            |
+   | `DATABASE_AUTH_TOKEN` | the Turso auth token from step 1                     |
+   | `CMS_PASSWORD`        | any password you'll remember (used to sign in)       |
+   | `AUTH_SECRET`         | the hex string from step 2                           |
 
-2. **Push this repo to GitHub** (private is fine).
+4. Click **Deploy**. Wait ~1 minute.
 
-3. **Connect to Vercel**
-   - Sign up at <https://vercel.com>.
-   - "Add New… → Project" → import the GitHub repo.
-   - In project settings → Environment Variables, set:
+That's it. Vercel runs the database migrations automatically on every deploy,
+so the schema is always up to date.
 
-     | Name                  | Value                                      |
-     | --------------------- | ------------------------------------------ |
-     | `DATABASE_URL`        | `libsql://your-db-name.turso.io`           |
-     | `DATABASE_AUTH_TOKEN` | _(the Turso auth token)_                   |
-     | `CMS_PASSWORD`        | _(your shared password)_                   |
-     | `AUTH_SECRET`         | _(run `openssl rand -hex 32`)_             |
+### 4. Use it
 
-   - Trigger a deploy. The first build will fail because migrations haven't
-     run yet on the remote DB — that's expected.
+Open the Vercel URL it gives you (something like
+`https://jadu-cms-yourname.vercel.app`). Enter your `CMS_PASSWORD`. You're in.
 
-4. **Run migrations against the remote DB once**
-
-   ```bash
-   DATABASE_URL="libsql://your-db-name.turso.io" \
-     DATABASE_AUTH_TOKEN="…" \
-     pnpm db:migrate
-   ```
-
-5. **Redeploy**. Every subsequent push to `main` redeploys automatically.
-   Push to a feature branch and Vercel creates a preview URL with the same
-   password gate.
+Every later code change you push to GitHub auto-deploys. Pushing to a feature
+branch gets you a separate preview URL with the same password gate — handy
+for showing drafts to colleagues without affecting your main workspace.
 
 ## Routes
 
@@ -70,11 +71,13 @@ Postgres needed for dev.
 | `/admin/categories`     | Manage categories                             |
 | `/preview/[slug]`       | Rendered preview using UoL design system CSS  |
 
-## What's in this phase
+## Where this is in the plan
 
-This is **Phase 1** of the plan — skeleton, deployment-ready, basic CRUD,
-preview route with UoL chrome. The content editor is still a plain HTML
-textarea. Phase 2 replaces it with TipTap and the JADU-style toolbar.
+This is **Phase 1** — skeleton, deployable, basic CRUD, preview route with
+UoL chrome. The content editor is still a plain HTML textarea. Phase 2
+replaces it with TipTap and the JADU-style toolbar (bold/italic/headings/
+lists/links/blockquote/hr) plus a **Copy HTML** button to paste into JADU's
+CKEditor Source view.
 
 ## Tech stack
 
@@ -87,11 +90,30 @@ textarea. Phase 2 replaces it with TipTap and the JADU-style toolbar.
 - **UoL design system CSS** — loaded from `jaducdn.leeds.ac.uk` on preview
   pages only.
 
+## Running locally (optional)
+
+You don't need this for normal use — the Vercel deploy is the whole product.
+Only do this if you want to develop new features.
+
+Requires Node 22+ and pnpm.
+
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm db:generate     # generate the initial migration
+pnpm db:migrate      # apply it to local SQLite
+pnpm dev
+```
+
+Open <http://localhost:3000> and sign in with the password from `.env.local`
+(default: `changeme`). The app uses a local SQLite file at `./local.db`.
+
 ## Scripts
 
 - `pnpm dev` — start the dev server.
-- `pnpm build` — production build.
+- `pnpm build` — production build (Next.js only).
+- `pnpm vercel-build` — what Vercel runs: migrate then build.
 - `pnpm start` — run the production build.
 - `pnpm db:generate` — create a new SQL migration from `src/db/schema.ts`.
-- `pnpm db:migrate` — apply pending migrations to the database in `DATABASE_URL`.
+- `pnpm db:migrate` — apply pending migrations to `DATABASE_URL`.
 - `pnpm db:studio` — open Drizzle Studio (a local web UI for the DB).
