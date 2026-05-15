@@ -28,48 +28,41 @@ export default async function PreviewPage({
 
   if (!doc) notFound();
 
-  const [category] = doc.categoryId
-    ? await db
-        .select()
-        .from(categories)
-        .where(eq(categories.id, doc.categoryId))
-        .limit(1)
-    : [];
+  // Fetch all categories + siblings in parallel. There are few categories so
+  // a single SELECT is cheaper than walking the parent chain one row at a time.
+  const [allCategories, siblings] = await Promise.all([
+    db.select().from(categories),
+    doc.categoryId
+      ? db
+          .select({
+            id: documents.id,
+            title: documents.title,
+            slug: documents.slug,
+          })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.categoryId, doc.categoryId),
+              ne(documents.id, doc.id)
+            )
+          )
+          .orderBy(asc(documents.title))
+      : Promise.resolve([] as { id: string; title: string; slug: string }[]),
+  ]);
 
-  // Walk up the parent chain so the breadcrumb shows the full hierarchy.
+  const categoriesById = new Map(allCategories.map((c) => [c.id, c]));
+  const category = doc.categoryId ? categoriesById.get(doc.categoryId) : undefined;
+
   const categoryChain: string[] = [];
   if (category) {
-    let current: typeof category | undefined = category;
     const seen = new Set<string>();
+    let current: typeof category | undefined = category;
     while (current && !seen.has(current.id)) {
       seen.add(current.id);
       categoryChain.unshift(current.name);
-      if (!current.parentId) break;
-      const [parent] = await db
-        .select()
-        .from(categories)
-        .where(eq(categories.id, current.parentId))
-        .limit(1);
-      current = parent;
+      current = current.parentId ? categoriesById.get(current.parentId) : undefined;
     }
   }
-
-  const siblings = doc.categoryId
-    ? await db
-        .select({
-          id: documents.id,
-          title: documents.title,
-          slug: documents.slug,
-        })
-        .from(documents)
-        .where(
-          and(
-            eq(documents.categoryId, doc.categoryId),
-            ne(documents.id, doc.id)
-          )
-        )
-        .orderBy(asc(documents.title))
-    : [];
 
   const sectionItems = category
     ? [

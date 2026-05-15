@@ -12,15 +12,14 @@ export default async function EditDocPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [doc] = await db
-    .select()
-    .from(documents)
-    .where(eq(documents.id, id))
-    .limit(1);
+  const [docResult, cats] = await Promise.all([
+    db.select().from(documents).where(eq(documents.id, id)).limit(1),
+    db.select().from(categories).orderBy(categories.name),
+  ]);
+  const [doc] = docResult;
 
   if (!doc) notFound();
 
-  const cats = await db.select().from(categories).orderBy(categories.name);
   const updateBound = updateDoc.bind(null, id);
   const deleteBound = deleteDoc.bind(null, id);
 

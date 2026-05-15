@@ -12,7 +12,6 @@ export default async function DocsList({
   searchParams: SearchParams;
 }) {
   const { status = "", category = "" } = await searchParams;
-  const cats = await db.select().from(categories).orderBy(categories.name);
 
   const conditions = [] as ReturnType<typeof eq>[];
   if (status === "draft" || status === "published") {
@@ -23,19 +22,22 @@ export default async function DocsList({
   }
   const where = conditions.length === 0 ? undefined : and(...conditions);
 
-  const rows = await db
-    .select({
-      id: documents.id,
-      title: documents.title,
-      slug: documents.slug,
-      status: documents.status,
-      updatedAt: documents.updatedAt,
-      categoryName: categories.name,
-    })
-    .from(documents)
-    .leftJoin(categories, eq(documents.categoryId, categories.id))
-    .where(where)
-    .orderBy(desc(documents.updatedAt));
+  const [cats, rows] = await Promise.all([
+    db.select().from(categories).orderBy(categories.name),
+    db
+      .select({
+        id: documents.id,
+        title: documents.title,
+        slug: documents.slug,
+        status: documents.status,
+        updatedAt: documents.updatedAt,
+        categoryName: categories.name,
+      })
+      .from(documents)
+      .leftJoin(categories, eq(documents.categoryId, categories.id))
+      .where(where)
+      .orderBy(desc(documents.updatedAt)),
+  ]);
 
   const activeFilter = status || category;
   const clearHref = "/admin/docs";
