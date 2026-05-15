@@ -5,8 +5,8 @@ import { PullQuoteView } from "./pull-quote-view";
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pullQuote: {
-      insertPullQuote: (attrs: { quote: string; author?: string }) => ReturnType;
-      updatePullQuote: (attrs: { quote: string; author?: string }) => ReturnType;
+      insertPullQuote: (attrs: { quote: string }) => ReturnType;
+      updatePullQuote: (attrs: { quote: string }) => ReturnType;
     };
   }
 }
@@ -20,7 +20,6 @@ export const PullQuote = Node.create({
   addAttributes() {
     return {
       quote: { default: "" },
-      author: { default: "" },
     };
   },
 
@@ -31,35 +30,21 @@ export const PullQuote = Node.create({
         getAttrs: (el) => {
           const node = el as HTMLElement;
           const p = node.querySelector("p");
-          const cite = node.querySelector("cite");
-          return {
-            quote: p?.textContent ?? "",
-            author: cite?.textContent?.replace(/^—\s*/, "") ?? "",
-          };
+          return { quote: p?.textContent ?? "" };
         },
       },
     ];
   },
 
   renderHTML({ node }) {
-    const { quote, author } = node.attrs as { quote: string; author: string };
-    const children: (string | Record<string, string> | unknown[])[] = [
-      ["p", quote],
-    ];
-    if (author) {
-      children.push([
-        "footer",
-        { class: "uol-pull-quote__footer" },
-        ["cite", `— ${author}`],
-      ]);
-    }
+    const { quote } = node.attrs as { quote: string };
     return [
       "div",
       {
         "aria-hidden": "true",
         class: "uol-typography-pull-quote uol-typography-pull-quote--left",
       },
-      ...children,
+      ["p", quote],
     ];
   },
 

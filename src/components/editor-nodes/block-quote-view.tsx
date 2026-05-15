@@ -3,20 +3,23 @@
 import type { NodeViewProps } from "@tiptap/react";
 import { NodeWrapper } from "./node-wrapper";
 import { openDialog } from "../editor-dialog";
-import { pullQuoteDialog } from "./dialogs";
+import { blockQuoteDialog } from "./dialogs";
 
-export function PullQuoteView({
+export function BlockQuoteView({
   node,
   updateAttributes,
   deleteNode,
   editor,
   getPos,
 }: NodeViewProps) {
+  const { quote, author } = node.attrs as { quote: string; author: string };
+
   const onEdit = () =>
     openDialog(
-      pullQuoteDialog(
-        { quote: node.attrs.quote },
-        (values) => updateAttributes({ quote: values.quote }),
+      blockQuoteDialog(
+        { quote, author },
+        (values) =>
+          updateAttributes({ quote: values.quote, author: values.author }),
         "Save"
       )
     );
@@ -28,7 +31,7 @@ export function PullQuoteView({
       .chain()
       .focus()
       .insertContentAt(pos + node.nodeSize, {
-        type: "pullQuote",
+        type: "uolBlockQuote",
         attrs: { ...node.attrs },
       })
       .run();
@@ -36,17 +39,19 @@ export function PullQuoteView({
 
   return (
     <NodeWrapper
-      label="Pull quote"
+      label="Block quote"
       onEdit={onEdit}
       onDuplicate={onDuplicate}
       onDelete={deleteNode}
     >
-      <div
-        aria-hidden="true"
-        className="uol-typography-pull-quote uol-typography-pull-quote--left"
-      >
-        <p>{node.attrs.quote || <em>Empty quote</em>}</p>
-      </div>
+      <blockquote className="uol-typography-blockquote">
+        <p>{quote || <em>Empty quote</em>}</p>
+        {author && (
+          <footer>
+            <cite>— {author}</cite>
+          </footer>
+        )}
+      </blockquote>
     </NodeWrapper>
   );
 }

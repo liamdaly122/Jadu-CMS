@@ -1,12 +1,35 @@
 import type { DialogConfig } from "../editor-dialog";
 
 export function pullQuoteDialog(
+  initial: { quote?: string },
+  onSubmit: (values: Record<string, string>) => void,
+  submitLabel = "Insert"
+): DialogConfig {
+  return {
+    title: "Pull quote (highlighted text)",
+    submitLabel,
+    fields: [
+      {
+        name: "quote",
+        label: "Quote text",
+        type: "textarea",
+        required: true,
+        placeholder: "A short, attention-grabbing statement…",
+        help: "Pulls a key sentence out of the page and styles it for emphasis. For a quote with attribution use Block quote instead.",
+      },
+    ],
+    initial: { quote: initial.quote ?? "" },
+    onSubmit,
+  };
+}
+
+export function blockQuoteDialog(
   initial: { quote?: string; author?: string },
   onSubmit: (values: Record<string, string>) => void,
   submitLabel = "Insert"
 ): DialogConfig {
   return {
-    title: "Pull quote",
+    title: "Block quote with attribution",
     submitLabel,
     fields: [
       {
@@ -14,14 +37,14 @@ export function pullQuoteDialog(
         label: "Quote",
         type: "textarea",
         required: true,
-        placeholder: "The quote text…",
+        placeholder: "What was said…",
       },
       {
         name: "author",
         label: "Attribution",
         type: "text",
         placeholder: "Optional — e.g. Dr Jane Smith, Researcher",
-        help: "Who said it. Leave blank if no attribution.",
+        help: "Who said it. Leave blank for a quote without attribution.",
       },
     ],
     initial: { quote: initial.quote ?? "", author: initial.author ?? "" },

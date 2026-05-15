@@ -11,6 +11,7 @@ import {
   Link as LinkIcon,
   Unlink,
   Quote,
+  Highlighter,
   Minus,
   Undo,
   Redo,
@@ -25,6 +26,7 @@ import {
 import { useCallback } from "react";
 
 import { PullQuote } from "./editor-nodes/pull-quote";
+import { UolBlockQuote } from "./editor-nodes/block-quote";
 import { LeedsImage } from "./editor-nodes/leeds-image";
 import { Cta } from "./editor-nodes/cta";
 import { Abbreviation } from "./editor-nodes/abbreviation";
@@ -35,6 +37,7 @@ import { TimeElement } from "./editor-nodes/time-element";
 import { EditorDialogHost, openDialog } from "./editor-dialog";
 import {
   pullQuoteDialog,
+  blockQuoteDialog,
   leedsImageDialog,
   ctaDialog,
   accordionDialog,
@@ -64,6 +67,7 @@ export function Editor({ value, onChange }: Props) {
         protocols: ["http", "https", "tel", "mailto"],
       }),
       PullQuote,
+      UolBlockQuote,
       LeedsImage,
       Cta,
       Abbreviation,
@@ -204,10 +208,18 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
   const insertPullQuote = useCallback(() => {
     openDialog(
       pullQuoteDialog({}, (values) =>
+        editor.chain().focus().insertPullQuote({ quote: values.quote }).run()
+      )
+    );
+  }, [editor]);
+
+  const insertBlockQuote = useCallback(() => {
+    openDialog(
+      blockQuoteDialog({}, (values) =>
         editor
           .chain()
           .focus()
-          .insertPullQuote({ quote: values.quote, author: values.author })
+          .insertUolBlockQuote({ quote: values.quote, author: values.author })
           .run()
       )
     );
@@ -309,8 +321,17 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
 
       <ToolbarDivider />
 
-      <ToolbarButton title="Pull quote with attribution" onClick={insertPullQuote}>
+      <ToolbarButton
+        title="Block quote (with attribution)"
+        onClick={insertBlockQuote}
+      >
         <Quote size={16} />
+      </ToolbarButton>
+      <ToolbarButton
+        title="Pull quote (highlight key text)"
+        onClick={insertPullQuote}
+      >
+        <Highlighter size={16} />
       </ToolbarButton>
       <ToolbarButton title="Accordion" onClick={insertAccordion}>
         <ChevronsUpDown size={16} />
