@@ -36,8 +36,17 @@ export function DocForm({
   const formRef = useRef<HTMLFormElement>(null);
   const dirtyAt = useRef<number>(0);
 
+  // Always read the LATEST state when we save. The previous version captured
+  // the first-render closure in setInterval, so autosave kept POSTing the
+  // original content — the preview "reset" you were seeing.
+  const stateRef = useRef({ html, relatedLinks, relatedContent, action });
+  useEffect(() => {
+    stateRef.current = { html, relatedLinks, relatedContent, action };
+  });
+
   const persist = async () => {
     if (!formRef.current) return;
+    const { html, relatedLinks, relatedContent, action } = stateRef.current;
     const fd = new FormData(formRef.current);
     fd.set("contentHtml", html);
     fd.set("relatedLinks", JSON.stringify(relatedLinks));
@@ -69,7 +78,7 @@ export function DocForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, relatedLinks, relatedContent, autoSave]);
 
-  // Debounce: every 2 s, if we've gone dirty, save.
+  // Debounced autosave: poll every 500 ms, save if dirty for >1.5 s.
   useEffect(() => {
     if (!autoSave) return;
     const interval = setInterval(() => {
