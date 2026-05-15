@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { db, documents, categories } from "@/db";
 import { and, desc, eq } from "drizzle-orm";
+import { deleteDoc } from "./actions";
+import { ListDeleteButton } from "./_list-delete-button";
 
 type SearchParams = Promise<{ status?: string; category?: string }>;
 
@@ -160,13 +162,19 @@ export default async function DocsList({
                   {new Date(d.updatedAt).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-2 text-right">
-                  <Link
-                    href={`/preview/${d.slug}`}
-                    target="_blank"
-                    className="text-blue-600 hover:underline"
-                  >
-                    Preview
-                  </Link>
+                  <div className="inline-flex items-center gap-3">
+                    <Link
+                      href={`/preview/${d.slug}`}
+                      target="_blank"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Preview
+                    </Link>
+                    <ListDeleteButton
+                      action={deleteDoc.bind(null, d.id, false)}
+                      title={d.title}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}

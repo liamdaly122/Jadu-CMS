@@ -109,6 +109,7 @@ export async function createDoc(formData: FormData) {
     relatedContent: data.relatedContent,
   });
 
+  revalidatePath("/admin");
   revalidatePath("/admin/docs");
   redirect(`/admin/docs/${id}/edit`);
 }
@@ -135,12 +136,14 @@ export async function updateDoc(id: string, formData: FormData) {
     })
     .where(eq(documents.id, id));
 
+  revalidatePath("/admin");
   revalidatePath("/admin/docs");
   revalidatePath(`/preview/${slug}`);
 }
 
-export async function deleteDoc(id: string) {
+export async function deleteDoc(id: string, redirectAfter: boolean = true) {
   await db.delete(documents).where(eq(documents.id, id));
+  revalidatePath("/admin");
   revalidatePath("/admin/docs");
-  redirect("/admin/docs");
+  if (redirectAfter) redirect("/admin/docs");
 }
