@@ -130,6 +130,14 @@ export function Editor({ value, onChange }: Props) {
     immediatelyRender: false,
   });
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && fullscreen) setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
   if (!editor) {
     return (
       <div className="rounded-md border border-slate-300 dark:border-slate-700">
@@ -164,14 +172,6 @@ export function Editor({ value, onChange }: Props) {
     const next = html.replace(re, replaceText);
     if (next !== html) editor.commands.setContent(next);
   };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && fullscreen) setFullscreen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [fullscreen]);
 
   const wrapperClasses = fullscreen
     ? "fixed inset-0 z-40 flex flex-col rounded-none border-none bg-white dark:bg-slate-950"
