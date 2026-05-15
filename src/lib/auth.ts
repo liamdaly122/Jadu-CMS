@@ -48,3 +48,24 @@ export async function clearSessionCookie() {
 }
 
 export const SESSION_COOKIE = COOKIE_NAME;
+
+export async function signShareToken(slug: string) {
+  return await new SignJWT({ slug, kind: "share" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("30d")
+    .sign(secretKey());
+}
+
+export async function verifyShareToken(
+  token: string | undefined,
+  slug: string
+) {
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, secretKey());
+    return payload.kind === "share" && payload.slug === slug;
+  } catch {
+    return false;
+  }
+}

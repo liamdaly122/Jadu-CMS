@@ -1,26 +1,55 @@
-import { db, categories } from "@/db";
+import { db, categories, type Category } from "@/db";
 import { createCategory, deleteCategory } from "./actions";
+
+function nameWithParents(cat: Category, byId: Map<string, Category>): string {
+  const chain: string[] = [];
+  let current: Category | undefined = cat;
+  const seen = new Set<string>();
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    chain.unshift(current.name);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+  return chain.join(" › ");
+}
 
 export default async function CategoriesPage() {
   const rows = await db.select().from(categories).orderBy(categories.name);
+  const byId = new Map(rows.map((c) => [c.id, c]));
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">Categories</h1>
 
-      <form action={createCategory} className="flex gap-2 mb-6">
-        <input
-          name="name"
-          required
-          placeholder="Category name"
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-        />
-        <button
-          type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Add
-        </button>
+      <form action={createCategory} className="mb-6 space-y-3">
+        <div className="flex gap-2">
+          <input
+            name="name"
+            required
+            placeholder="Category name"
+            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Add
+          </button>
+        </div>
+        {rows.length > 0 && (
+          <select
+            name="parentId"
+            defaultValue=""
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <option value="">— Top level (no parent) —</option>
+            {rows.map((c) => (
+              <option key={c.id} value={c.id}>
+                Parent: {nameWithParents(c, byId)}
+              </option>
+            ))}
+          </select>
+        )}
       </form>
 
       {rows.length === 0 ? (
@@ -33,7 +62,9 @@ export default async function CategoriesPage() {
             const del = deleteCategory.bind(null, c.id);
             return (
               <li key={c.id} className="px-4 py-3 flex items-center gap-3">
-                <span className="flex-1 font-medium">{c.name}</span>
+                <span className="flex-1 font-medium">
+                  {nameWithParents(c, byId)}
+                </span>
                 <code className="text-xs text-slate-500">{c.slug}</code>
                 <form action={del}>
                   <button

@@ -52,10 +52,10 @@ export function SectionNav({
 }
 
 export function Breadcrumb({
-  category,
+  categoryChain,
   title,
 }: {
-  category?: string;
+  categoryChain?: string[];
   title: string;
 }) {
   return (
@@ -66,11 +66,11 @@ export function Breadcrumb({
             Home
           </a>
         </li>
-        {category && (
-          <li className="uol-breadcrumb__item">
-            <span className="uol-breadcrumb__link">{category}</span>
+        {(categoryChain ?? []).map((name) => (
+          <li key={name} className="uol-breadcrumb__item">
+            <span className="uol-breadcrumb__link">{name}</span>
           </li>
-        )}
+        ))}
         <li className="uol-breadcrumb__item">
           <span className="uol-breadcrumb__link" aria-current="page">
             {title}

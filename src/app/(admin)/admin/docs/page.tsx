@@ -1,8 +1,26 @@
 import Link from "next/link";
 import { db, documents, categories } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
-export default async function DocsList() {
+type SearchParams = Promise<{ status?: string; category?: string }>;
+
+export default async function DocsList({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { status = "", category = "" } = await searchParams;
+  const cats = await db.select().from(categories).orderBy(categories.name);
+
+  const conditions = [] as ReturnType<typeof eq>[];
+  if (status === "draft" || status === "published") {
+    conditions.push(eq(documents.status, status));
+  }
+  if (category) {
+    conditions.push(eq(documents.categoryId, category));
+  }
+  const where = conditions.length === 0 ? undefined : and(...conditions);
+
   const rows = await db
     .select({
       id: documents.id,
@@ -14,7 +32,11 @@ export default async function DocsList() {
     })
     .from(documents)
     .leftJoin(categories, eq(documents.categoryId, categories.id))
+    .where(where)
     .orderBy(desc(documents.updatedAt));
+
+  const activeFilter = status || category;
+  const clearHref = "/admin/docs";
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -27,6 +49,66 @@ export default async function DocsList() {
           New document
         </Link>
       </header>
+
+      <form
+        action="/admin/docs"
+        method="GET"
+        className="flex items-end gap-3 mb-4"
+      >
+        <div>
+          <label
+            htmlFor="filter-status"
+            className="block text-xs font-medium mb-0.5 text-slate-600 dark:text-slate-400"
+          >
+            Status
+          </label>
+          <select
+            id="filter-status"
+            name="status"
+            defaultValue={status}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <option value="">All</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="filter-category"
+            className="block text-xs font-medium mb-0.5 text-slate-600 dark:text-slate-400"
+          >
+            Category
+          </label>
+          <select
+            id="filter-category"
+            name="category"
+            defaultValue={category}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <option value="">All</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          Apply
+        </button>
+        {activeFilter && (
+          <Link
+            href={clearHref}
+            className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:underline"
+          >
+            Clear filters
+          </Link>
+        )}
+      </form>
 
       <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table className="w-full text-sm">
@@ -46,7 +128,7 @@ export default async function DocsList() {
                   colSpan={5}
                   className="px-4 py-8 text-center text-slate-500"
                 >
-                  No documents yet.
+                  {activeFilter ? "No documents match the filters." : "No documents yet."}
                 </td>
               </tr>
             )}

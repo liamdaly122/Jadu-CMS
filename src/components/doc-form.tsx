@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Loader2 } from "lucide-react";
 import { Editor } from "./editor";
 import { CopyHtmlButton } from "./copy-html-button";
 import {
@@ -14,24 +15,87 @@ type Props = {
   cats: Category[];
   action: (formData: FormData) => void | Promise<void>;
   submitLabel?: string;
+  autoSave?: boolean;
 };
 
-export function DocForm({ doc, cats, action, submitLabel = "Save" }: Props) {
+type SaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
+export function DocForm({
+  doc,
+  cats,
+  action,
+  submitLabel = "Save",
+  autoSave = false,
+}: Props) {
   const [html, setHtml] = useState(doc?.contentHtml ?? "");
   const [relatedLinks, setRelatedLinks] = useState(doc?.relatedLinks ?? []);
   const [relatedContent, setRelatedContent] = useState(
     doc?.relatedContent ?? []
   );
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const formRef = useRef<HTMLFormElement>(null);
+  const dirtyAt = useRef<number>(0);
 
-  const submit = async (formData: FormData) => {
-    formData.set("contentHtml", html);
-    formData.set("relatedLinks", JSON.stringify(relatedLinks));
-    formData.set("relatedContent", JSON.stringify(relatedContent));
-    await action(formData);
+  const persist = async () => {
+    if (!formRef.current) return;
+    const fd = new FormData(formRef.current);
+    fd.set("contentHtml", html);
+    fd.set("relatedLinks", JSON.stringify(relatedLinks));
+    fd.set("relatedContent", JSON.stringify(relatedContent));
+    setStatus("saving");
+    try {
+      await action(fd);
+      setStatus("saved");
+    } catch {
+      setStatus("error");
+    }
   };
 
+  const submit = async () => {
+    await persist();
+  };
+
+  const markDirty = () => {
+    if (!autoSave) return;
+    dirtyAt.current = Date.now();
+    setStatus("pending");
+  };
+
+  // Trigger autosave when relevant state changes.
+  useEffect(() => {
+    if (!autoSave) return;
+    markDirty();
+    // Intentionally not including markDirty since it's stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [html, relatedLinks, relatedContent, autoSave]);
+
+  // Debounce: every 2 s, if we've gone dirty, save.
+  useEffect(() => {
+    if (!autoSave) return;
+    const interval = setInterval(() => {
+      if (dirtyAt.current === 0) return;
+      if (Date.now() - dirtyAt.current < 1500) return;
+      dirtyAt.current = 0;
+      void persist();
+    }, 500);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSave]);
+
+  // Fade the "Saved" pill back to idle.
+  useEffect(() => {
+    if (status !== "saved") return;
+    const t = setTimeout(() => setStatus("idle"), 2000);
+    return () => clearTimeout(t);
+  }, [status]);
+
   return (
-    <form action={submit} className="space-y-5">
+    <form
+      ref={formRef}
+      action={submit}
+      onChange={markDirty}
+      className="space-y-5"
+    >
       <div>
         <label htmlFor="title" className="block text-sm font-medium mb-1">
           Title <span className="text-red-600">*</span>
@@ -213,6 +277,25 @@ export function DocForm({ doc, cats, action, submitLabel = "Save" }: Props) {
         >
           {submitLabel}
         </button>
+        {autoSave && (
+          <span className="text-xs text-slate-500 inline-flex items-center gap-1.5">
+            {status === "saving" && (
+              <>
+                <Loader2 size={12} className="animate-spin" /> Saving…
+              </>
+            )}
+            {status === "pending" && <>Unsaved changes…</>}
+            {status === "saved" && (
+              <>
+                <Check size={12} className="text-green-600" /> Saved
+              </>
+            )}
+            {status === "error" && (
+              <span className="text-red-600">Auto-save failed</span>
+            )}
+            {status === "idle" && <>Auto-saving every couple of seconds</>}
+          </span>
+        )}
       </div>
     </form>
   );

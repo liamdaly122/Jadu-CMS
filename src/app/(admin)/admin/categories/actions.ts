@@ -16,10 +16,12 @@ function slugify(s: string) {
 export async function createCategory(formData: FormData) {
   const name = formData.get("name")?.toString().trim();
   if (!name) return;
+  const parentId = formData.get("parentId")?.toString().trim() || null;
   await db.insert(categories).values({
     id: crypto.randomUUID(),
     name,
     slug: slugify(name),
+    parentId,
   });
   revalidatePath("/admin/categories");
 }

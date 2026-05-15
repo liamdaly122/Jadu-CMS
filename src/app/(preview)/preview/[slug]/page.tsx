@@ -36,6 +36,24 @@ export default async function PreviewPage({
         .limit(1)
     : [];
 
+  // Walk up the parent chain so the breadcrumb shows the full hierarchy.
+  const categoryChain: string[] = [];
+  if (category) {
+    let current: typeof category | undefined = category;
+    const seen = new Set<string>();
+    while (current && !seen.has(current.id)) {
+      seen.add(current.id);
+      categoryChain.unshift(current.name);
+      if (!current.parentId) break;
+      const [parent] = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.id, current.parentId))
+        .limit(1);
+      current = parent;
+    }
+  }
+
   const siblings = doc.categoryId
     ? await db
         .select({
@@ -70,7 +88,7 @@ export default async function PreviewPage({
         <SectionNav sectionTitle={category.name} items={sectionItems} />
       )}
       <div className="uol-content-container uol-main-container">
-        <Breadcrumb category={category?.name} title={doc.title} />
+        <Breadcrumb categoryChain={categoryChain} title={doc.title} />
         <div className="uol-col-container uol-page-container">
           <div className="uol-side-nav-container"></div>
           <main id="main" tabIndex={-1} className="uol-page">

@@ -24,8 +24,12 @@ import {
   Calendar,
   Languages,
   Code2,
+  Maximize2,
+  Minimize2,
+  Search,
+  X,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { PullQuote } from "./editor-nodes/pull-quote";
 import { UolBlockQuote } from "./editor-nodes/block-quote";
@@ -56,9 +60,41 @@ type Props = {
   onChange: (html: string) => void;
 };
 
+function countSyllables(word: string): number {
+  const w = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (!w) return 0;
+  if (w.length <= 3) return 1;
+  const groups = w
+    .replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "")
+    .replace(/^y/, "")
+    .match(/[aeiouy]{1,2}/g);
+  return groups?.length || 1;
+}
+
+function fleschGrade(text: string): { score: number; label: string } | null {
+  const sentences = text.split(/[.!?]+/).filter((s) => s.trim()).length;
+  const words = text.split(/\s+/).filter(Boolean);
+  if (sentences === 0 || words.length < 10) return null;
+  const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+  const score =
+    206.835 - 1.015 * (words.length / sentences) - 84.6 * (syllables / words.length);
+  let label = "Very difficult";
+  if (score >= 90) label = "Very easy";
+  else if (score >= 80) label = "Easy";
+  else if (score >= 70) label = "Fairly easy";
+  else if (score >= 60) label = "Plain English";
+  else if (score >= 50) label = "Fairly difficult";
+  else if (score >= 30) label = "Difficult";
+  return { score: Math.round(score), label };
+}
+
 export function Editor({ value, onChange }: Props) {
   const [sourceMode, setSourceMode] = useState(false);
   const [sourceDraft, setSourceDraft] = useState(value);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
 
   const editor = useEditor({
     extensions: [
@@ -118,31 +154,99 @@ export function Editor({ value, onChange }: Props) {
 
   const characters = editor.storage.characterCount?.characters?.() ?? 0;
   const words = editor.storage.characterCount?.words?.() ?? 0;
+  const flesch = fleschGrade(editor.getText());
+
+  const replaceAll = () => {
+    if (!findText) return;
+    const html = editor.getHTML();
+    const escaped = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(escaped, "g");
+    const next = html.replace(re, replaceText);
+    if (next !== html) editor.commands.setContent(next);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && fullscreen) setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
+  const wrapperClasses = fullscreen
+    ? "fixed inset-0 z-40 flex flex-col rounded-none border-none bg-white dark:bg-slate-950"
+    : "rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950";
 
   return (
     <>
-      <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950">
+      <div className={wrapperClasses}>
         <Toolbar
           editor={editor}
           sourceMode={sourceMode}
           toggleSource={toggleSource}
+          fullscreen={fullscreen}
+          toggleFullscreen={() => setFullscreen((v) => !v)}
+          toggleFind={() => setFindOpen((v) => !v)}
         />
-        {sourceMode ? (
-          <textarea
-            value={sourceDraft}
-            onChange={(e) => setSourceDraft(e.target.value)}
-            className="min-h-[400px] w-full p-4 text-sm font-mono focus:outline-none bg-white dark:bg-slate-950"
-            spellCheck={false}
-          />
-        ) : (
-          <EditorContent editor={editor} />
+        {findOpen && !sourceMode && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 px-2 py-2 bg-slate-50 dark:bg-slate-900">
+            <input
+              type="text"
+              value={findText}
+              onChange={(e) => setFindText(e.target.value)}
+              placeholder="Find"
+              className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+            <input
+              type="text"
+              value={replaceText}
+              onChange={(e) => setReplaceText(e.target.value)}
+              placeholder="Replace with"
+              className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
+            />
+            <button
+              type="button"
+              onClick={replaceAll}
+              disabled={!findText}
+              className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              Replace all
+            </button>
+            <button
+              type="button"
+              onClick={() => setFindOpen(false)}
+              title="Close"
+              className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+            >
+              <X size={14} />
+            </button>
+          </div>
         )}
+        <div className={fullscreen ? "flex-1 overflow-auto" : ""}>
+          {sourceMode ? (
+            <textarea
+              value={sourceDraft}
+              onChange={(e) => setSourceDraft(e.target.value)}
+              className={`w-full p-4 text-sm font-mono focus:outline-none bg-white dark:bg-slate-950 ${
+                fullscreen ? "h-full min-h-0" : "min-h-[400px]"
+              }`}
+              spellCheck={false}
+            />
+          ) : (
+            <EditorContent editor={editor} />
+          )}
+        </div>
         <div className="border-t border-slate-200 dark:border-slate-800 px-3 py-1.5 text-xs text-slate-500 flex justify-between">
           <span>
             {sourceMode
               ? "Editing HTML source"
               : `${words} word${words === 1 ? "" : "s"} · ${characters} character${characters === 1 ? "" : "s"}`}
           </span>
+          {!sourceMode && flesch && (
+            <span title="Flesch reading ease score">
+              Readability: {flesch.score} ({flesch.label})
+            </span>
+          )}
         </div>
       </div>
       <EditorDialogHost />
@@ -154,10 +258,16 @@ function Toolbar({
   editor,
   sourceMode,
   toggleSource,
+  fullscreen,
+  toggleFullscreen,
+  toggleFind,
 }: {
   editor: TipTapEditor;
   sourceMode: boolean;
   toggleSource: () => void;
+  fullscreen: boolean;
+  toggleFullscreen: () => void;
+  toggleFind: () => void;
 }) {
   const setLink = useCallback(() => {
     const prev = (editor.getAttributes("link").href ?? "") as string;
@@ -323,13 +433,22 @@ function Toolbar({
         <span className="px-2 text-xs font-medium uppercase tracking-wider text-slate-500">
           HTML source
         </span>
-        <ToolbarButton
-          title="Back to rich editor"
-          onClick={toggleSource}
-          active
-        >
-          <Code2 size={16} />
-        </ToolbarButton>
+        <div className="flex items-center gap-1">
+          <ToolbarButton
+            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            onClick={toggleFullscreen}
+            active={fullscreen}
+          >
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </ToolbarButton>
+          <ToolbarButton
+            title="Back to rich editor"
+            onClick={toggleSource}
+            active
+          >
+            <Code2 size={16} />
+          </ToolbarButton>
+        </div>
       </div>
     );
   }
@@ -472,12 +591,22 @@ function Toolbar({
 
       <ToolbarDivider />
 
+      <ToolbarButton title="Find and replace" onClick={toggleFind}>
+        <Search size={16} />
+      </ToolbarButton>
       <ToolbarButton
         title={sourceMode ? "Back to rich editor" : "View HTML source"}
         onClick={toggleSource}
         active={sourceMode}
       >
         <Code2 size={16} />
+      </ToolbarButton>
+      <ToolbarButton
+        title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen editor"}
+        onClick={toggleFullscreen}
+        active={fullscreen}
+      >
+        {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </ToolbarButton>
     </div>
   );

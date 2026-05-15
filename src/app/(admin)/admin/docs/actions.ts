@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db, documents } from "@/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { signShareToken } from "@/lib/auth";
+
+export async function getShareToken(slug: string) {
+  return await signShareToken(slug);
+}
 
 function slugify(s: string) {
   return s
