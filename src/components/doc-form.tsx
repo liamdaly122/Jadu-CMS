@@ -1,16 +1,27 @@
-import { db, categories, type Document } from "@/db";
+"use client";
+
+import { useState } from "react";
+import { Editor } from "./editor";
+import { CopyHtmlButton } from "./copy-html-button";
+import type { Document, Category } from "@/db";
 
 type Props = {
-  action: (formData: FormData) => void;
   doc?: Document;
+  cats: Category[];
+  action: (formData: FormData) => void | Promise<void>;
   submitLabel?: string;
 };
 
-export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
-  const cats = await db.select().from(categories).orderBy(categories.name);
+export function DocForm({ doc, cats, action, submitLabel = "Save" }: Props) {
+  const [html, setHtml] = useState(doc?.contentHtml ?? "");
+
+  const submit = async (formData: FormData) => {
+    formData.set("contentHtml", html);
+    await action(formData);
+  };
 
   return (
-    <form action={action} className="space-y-5 max-w-3xl">
+    <form action={submit} className="space-y-5">
       <div>
         <label htmlFor="title" className="block text-sm font-medium mb-1">
           Title <span className="text-red-600">*</span>
@@ -43,7 +54,10 @@ export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
       </div>
 
       <div>
-        <label htmlFor="featuredImageUrl" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="featuredImageUrl"
+          className="block text-sm font-medium mb-1"
+        >
           Featured image URL
         </label>
         <input
@@ -55,13 +69,16 @@ export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
         />
         <p className="text-xs text-slate-500 mt-1">
-          Paste a URL from JADU's image library (or any URL). Leave blank for a
-          placeholder.
+          Paste a URL from JADU's image library (or any URL). Leave blank for
+          no image.
         </p>
       </div>
 
       <div>
-        <label htmlFor="featuredImageAlt" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="featuredImageAlt"
+          className="block text-sm font-medium mb-1"
+        >
           Featured image alt text
         </label>
         <input
@@ -74,21 +91,11 @@ export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
       </div>
 
       <div>
-        <label htmlFor="contentHtml" className="block text-sm font-medium mb-1">
-          Content (HTML)
-        </label>
-        <textarea
-          id="contentHtml"
-          name="contentHtml"
-          rows={14}
-          defaultValue={doc?.contentHtml ?? ""}
-          placeholder="<p>Your content here. Phase 2 will replace this with the rich editor.</p>"
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
-        />
-        <p className="text-xs text-slate-500 mt-1">
-          Plain HTML for now. Phase 2 swaps this for TipTap with the JADU
-          toolbar.
-        </p>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium">Content</label>
+          <CopyHtmlButton html={html} />
+        </div>
+        <Editor value={html} onChange={setHtml} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -133,7 +140,10 @@ export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
         </summary>
         <div className="p-4 space-y-4 border-t border-slate-200 dark:border-slate-800">
           <div>
-            <label htmlFor="metaDescription" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="metaDescription"
+              className="block text-sm font-medium mb-1"
+            >
               Description
             </label>
             <textarea
@@ -145,7 +155,10 @@ export async function DocForm({ action, doc, submitLabel = "Save" }: Props) {
             />
           </div>
           <div>
-            <label htmlFor="metaKeywords" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="metaKeywords"
+              className="block text-sm font-medium mb-1"
+            >
               Keywords
             </label>
             <input
