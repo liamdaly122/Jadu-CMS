@@ -46,6 +46,7 @@ export function DocForm({
 
   const persist = async () => {
     if (!formRef.current) return;
+    dirtyAt.current = 0;
     const { html, relatedLinks, relatedContent, action } = stateRef.current;
     const fd = new FormData(formRef.current);
     fd.set("contentHtml", html);
@@ -78,15 +79,16 @@ export function DocForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, relatedLinks, relatedContent, autoSave]);
 
-  // Debounced autosave: poll every 500 ms, save if dirty for >1.5 s.
+  // Autosave runs every 5 minutes. The interval just checks whether there
+  // are unsaved changes (dirtyAt > 0) and persists if so. persist() clears
+  // the dirty flag itself so a manual save doesn't trigger an extra cycle.
   useEffect(() => {
     if (!autoSave) return;
+    const FIVE_MINUTES = 5 * 60 * 1000;
     const interval = setInterval(() => {
       if (dirtyAt.current === 0) return;
-      if (Date.now() - dirtyAt.current < 1500) return;
-      dirtyAt.current = 0;
       void persist();
-    }, 500);
+    }, FIVE_MINUTES);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSave]);
@@ -302,7 +304,7 @@ export function DocForm({
             {status === "error" && (
               <span className="text-red-600">Auto-save failed</span>
             )}
-            {status === "idle" && <>Auto-saving every couple of seconds</>}
+            {status === "idle" && <>Auto-saves every 5 minutes</>}
           </span>
         )}
       </div>
