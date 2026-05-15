@@ -44,6 +44,7 @@ export const documents = sqliteTable("documents", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
 });
 
 export type Document = typeof documents.$inferSelect;

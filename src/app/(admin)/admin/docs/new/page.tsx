@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { db, categories } from "@/db";
 import { DocForm } from "@/components/doc-form";
 import { createDoc } from "../actions";
+
+export const metadata: Metadata = { title: "New document | Jadu-CMS" };
 
 export default async function NewDocPage() {
   const cats = await db.select().from(categories).orderBy(categories.name);

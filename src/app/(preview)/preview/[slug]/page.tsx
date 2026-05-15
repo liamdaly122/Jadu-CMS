@@ -1,6 +1,24 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { db, documents, categories } from "@/db";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne } from "drizzle-orm";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const [doc] = await db
+    .select({ title: documents.title })
+    .from(documents)
+    .where(and(eq(documents.slug, slug), isNull(documents.deletedAt)))
+    .limit(1);
+  return {
+    title: doc ? `${doc.title} | Preview` : "Preview | Jadu-CMS",
+    robots: { index: false, follow: false },
+  };
+}
 import {
   Breadcrumb,
   FeaturedImage,
@@ -23,7 +41,7 @@ export default async function PreviewPage({
   const [doc] = await db
     .select()
     .from(documents)
-    .where(eq(documents.slug, slug))
+    .where(and(eq(documents.slug, slug), isNull(documents.deletedAt)))
     .limit(1);
 
   if (!doc) notFound();
@@ -43,7 +61,8 @@ export default async function PreviewPage({
           .where(
             and(
               eq(documents.categoryId, doc.categoryId),
-              ne(documents.id, doc.id)
+              ne(documents.id, doc.id),
+              isNull(documents.deletedAt)
             )
           )
           .orderBy(asc(documents.title))

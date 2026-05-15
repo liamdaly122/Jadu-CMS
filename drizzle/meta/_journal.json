@@ -15,6 +15,13 @@
       "when": 1778865533287,
       "tag": "0001_special_random",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778866632514,
+      "tag": "0002_dark_toro",
+      "breakpoints": true
     }
   ]
 }

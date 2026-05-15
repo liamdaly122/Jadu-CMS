@@ -40,6 +40,14 @@ export default function AdminLayout({
                 Categories
               </Link>
             </li>
+            <li>
+              <Link
+                href="/admin/trash"
+                className="block rounded px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800"
+              >
+                Trash
+              </Link>
+            </li>
           </ul>
         </nav>
         <form action={logout} className="mt-auto px-2 py-3">

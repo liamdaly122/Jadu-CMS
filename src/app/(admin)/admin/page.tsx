@@ -1,11 +1,15 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { db, documents } from "@/db";
-import { desc } from "drizzle-orm";
+import { desc, isNull } from "drizzle-orm";
+
+export const metadata: Metadata = { title: "Dashboard | Jadu-CMS" };
 
 export default async function AdminDashboard() {
   const recent = await db
     .select()
     .from(documents)
+    .where(isNull(documents.deletedAt))
     .orderBy(desc(documents.updatedAt))
     .limit(5);
 

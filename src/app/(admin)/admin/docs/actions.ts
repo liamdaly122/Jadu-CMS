@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db, documents } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { signShareToken } from "@/lib/auth";
 
@@ -145,9 +145,55 @@ export async function updateDoc(id: string, formData: FormData) {
   revalidatePath(`/preview/${slug}`);
 }
 
+// Soft-delete: marks deletedAt. Hard delete only happens from the trash page.
 export async function deleteDoc(id: string, redirectAfter: boolean = true) {
+  await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(eq(documents.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/admin/docs");
+  revalidatePath("/admin/trash");
+  if (redirectAfter) redirect("/admin/docs");
+}
+
+export async function restoreDoc(id: string) {
+  await db
+    .update(documents)
+    .set({ deletedAt: null })
+    .where(eq(documents.id, id));
+  revalidatePath("/admin");
+  revalidatePath("/admin/docs");
+  revalidatePath("/admin/trash");
+}
+
+export async function permanentlyDeleteDoc(id: string) {
   await db.delete(documents).where(eq(documents.id, id));
   revalidatePath("/admin");
   revalidatePath("/admin/docs");
-  if (redirectAfter) redirect("/admin/docs");
+  revalidatePath("/admin/trash");
+}
+
+export async function bulkSoftDelete(ids: string[]) {
+  if (ids.length === 0) return;
+  await db
+    .update(documents)
+    .set({ deletedAt: new Date() })
+    .where(inArray(documents.id, ids));
+  revalidatePath("/admin");
+  revalidatePath("/admin/docs");
+  revalidatePath("/admin/trash");
+}
+
+export async function bulkSetStatus(
+  ids: string[],
+  status: "draft" | "published"
+) {
+  if (ids.length === 0) return;
+  await db
+    .update(documents)
+    .set({ status, updatedAt: new Date() })
+    .where(inArray(documents.id, ids));
+  revalidatePath("/admin");
+  revalidatePath("/admin/docs");
 }

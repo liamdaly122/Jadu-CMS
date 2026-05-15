@@ -1,10 +1,27 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { db, documents, categories } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { EditPane } from "@/components/edit-pane";
 import { updateDoc, deleteDoc } from "../../actions";
 import { DeleteButton } from "./_delete-button";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const [doc] = await db
+    .select({ title: documents.title })
+    .from(documents)
+    .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+    .limit(1);
+  return {
+    title: doc ? `${doc.title} | Jadu-CMS` : "Document | Jadu-CMS",
+  };
+}
 
 export default async function EditDocPage({
   params,
@@ -13,7 +30,11 @@ export default async function EditDocPage({
 }) {
   const { id } = await params;
   const [docResult, cats] = await Promise.all([
-    db.select().from(documents).where(eq(documents.id, id)).limit(1),
+    db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
+      .limit(1),
     db.select().from(categories).orderBy(categories.name),
   ]);
   const [doc] = docResult;

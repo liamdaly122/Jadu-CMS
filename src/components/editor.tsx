@@ -180,53 +180,58 @@ export function Editor({ value, onChange }: Props) {
   return (
     <>
       <div className={wrapperClasses}>
-        <Toolbar
-          editor={editor}
-          sourceMode={sourceMode}
-          toggleSource={toggleSource}
-          fullscreen={fullscreen}
-          toggleFullscreen={() => setFullscreen((v) => !v)}
-          toggleFind={() => setFindOpen((v) => !v)}
-        />
-        {findOpen && !sourceMode && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 px-2 py-2 bg-slate-50 dark:bg-slate-900">
-            <input
-              type="text"
-              value={findText}
-              onChange={(e) => setFindText(e.target.value)}
-              placeholder="Find"
-              className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
-            />
-            <input
-              type="text"
-              value={replaceText}
-              onChange={(e) => setReplaceText(e.target.value)}
-              placeholder="Replace with"
-              className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
-            />
-            <button
-              type="button"
-              onClick={replaceAll}
-              disabled={!findText}
-              className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              Replace all
-            </button>
-            <button
-              type="button"
-              onClick={() => setFindOpen(false)}
-              title="Close"
-              className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
+        <div className="sticky top-0 z-10 bg-white dark:bg-slate-950 rounded-t-md">
+          <Toolbar
+            editor={editor}
+            sourceMode={sourceMode}
+            toggleSource={toggleSource}
+            fullscreen={fullscreen}
+            toggleFullscreen={() => setFullscreen((v) => !v)}
+            toggleFind={() => setFindOpen((v) => !v)}
+          />
+          {findOpen && !sourceMode && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 px-2 py-2 bg-slate-50 dark:bg-slate-900">
+              <input
+                type="text"
+                value={findText}
+                onChange={(e) => setFindText(e.target.value)}
+                placeholder="Find"
+                className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
+              />
+              <input
+                type="text"
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                placeholder="Replace with"
+                className="flex-1 min-w-[120px] rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-950"
+              />
+              <button
+                type="button"
+                onClick={replaceAll}
+                disabled={!findText}
+                className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Replace all
+              </button>
+              <button
+                type="button"
+                onClick={() => setFindOpen(false)}
+                title="Close"
+                className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
         <div className={fullscreen ? "flex-1 overflow-auto" : ""}>
           {sourceMode ? (
             <textarea
               value={sourceDraft}
-              onChange={(e) => setSourceDraft(e.target.value)}
+              onChange={(e) => {
+                setSourceDraft(e.target.value);
+                onChange(e.target.value);
+              }}
               className={`w-full p-4 text-sm font-mono focus:outline-none bg-white dark:bg-slate-950 ${
                 fullscreen ? "h-full min-h-0" : "min-h-[400px]"
               }`}
@@ -436,7 +441,7 @@ function Toolbar({
 
   if (sourceMode) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5">
+      <div className="flex items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5">
         <span className="px-2 text-xs font-medium uppercase tracking-wider text-slate-500">
           HTML source
         </span>
@@ -461,7 +466,7 @@ function Toolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5">
+    <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 px-2 py-1.5 overflow-x-auto whitespace-nowrap">
       <ToolbarButton
         title="Bold (Ctrl+B)"
         onClick={() => editor.chain().focus().toggleBold().run()}

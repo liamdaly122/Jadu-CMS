@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { db, categories, type Category } from "@/db";
 import { createCategory, deleteCategory } from "./actions";
+
+export const metadata: Metadata = { title: "Categories | Jadu-CMS" };
 
 function nameWithParents(cat: Category, byId: Map<string, Category>): string {
   const chain: string[] = [];
