@@ -17,7 +17,7 @@ export default async function DocsList() {
     .orderBy(desc(documents.updatedAt));
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-6xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Document Pages</h1>
         <Link

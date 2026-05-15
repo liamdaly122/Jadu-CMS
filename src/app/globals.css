@@ -107,6 +107,79 @@ body {
   padding: 0;
   color: inherit;
 }
+
+/* UoL custom blocks — minimal indicators inside the editor.
+   The preview iframe uses the real UoL stylesheet for accurate rendering. */
+.prose-editor .uol-typography-pull-quote {
+  border-left: 4px solid rgb(220 38 38);
+  background: rgb(254 242 242);
+  padding: 1em 1.25em;
+  margin: 1em 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-style: italic;
+  color: rgb(15 23 42);
+}
+.prose-editor .uol-typography-pull-quote--right {
+  border-left: none;
+  border-right: 4px solid rgb(220 38 38);
+  text-align: right;
+}
+.prose-editor .uol-rich-text__figure {
+  margin: 1em 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: 0.5em;
+  border: 1px dashed rgb(203 213 225);
+  border-radius: 4px;
+}
+.prose-editor .uol-rich-text__figure img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.prose-editor .uol-rich-text__figure figcaption {
+  font-size: 0.875rem;
+  color: rgb(71 85 105);
+  font-style: italic;
+}
+.prose-editor .uol-widget-container__ctas {
+  margin: 1em 0;
+  padding: 1em 1.25em;
+  border: 2px solid rgb(220 38 38);
+  border-radius: 4px;
+  background: rgb(254 242 242);
+}
+.prose-editor .uol-in-text-cta__heading {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.25em;
+}
+.prose-editor .uol-in-text-cta__heading a {
+  color: rgb(220 38 38);
+  text-decoration: none;
+}
+.prose-editor .uol-in-text-cta__text {
+  margin: 0;
+  font-size: 0.95em;
+}
+.prose-editor abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+@media (prefers-color-scheme: dark) {
+  .prose-editor .uol-typography-pull-quote {
+    background: rgb(69 10 10 / 0.3);
+    color: rgb(241 245 249);
+  }
+  .prose-editor .uol-widget-container__ctas {
+    background: rgb(69 10 10 / 0.3);
+  }
+  .prose-editor .uol-rich-text__figure {
+    border-color: rgb(71 85 105);
+  }
+}
 @media (prefers-color-scheme: dark) {
   .prose-editor blockquote {
     border-left-color: rgb(71 85 105);

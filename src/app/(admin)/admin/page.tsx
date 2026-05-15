@@ -10,7 +10,7 @@ export default async function AdminDashboard() {
     .limit(5);
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-5xl mx-auto">
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <Link

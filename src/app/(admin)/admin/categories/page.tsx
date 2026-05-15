@@ -5,7 +5,7 @@ export default async function CategoriesPage() {
   const rows = await db.select().from(categories).orderBy(categories.name);
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">Categories</h1>
 
       <form action={createCategory} className="flex gap-2 mb-6">

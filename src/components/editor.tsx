@@ -14,8 +14,17 @@ import {
   Minus,
   Undo,
   Redo,
+  Image as ImageIcon,
+  Megaphone,
+  Phone,
+  TextQuote,
 } from "lucide-react";
 import { useCallback } from "react";
+
+import { PullQuote } from "./editor-nodes/pull-quote";
+import { LeedsImage } from "./editor-nodes/leeds-image";
+import { Cta } from "./editor-nodes/cta";
+import { Abbreviation } from "./editor-nodes/abbreviation";
 
 type Props = {
   value: string;
@@ -31,10 +40,13 @@ export function Editor({ value, onChange }: Props) {
       Link.configure({
         openOnClick: false,
         autolink: true,
-        HTMLAttributes: {
-          rel: "noopener noreferrer",
-        },
+        HTMLAttributes: { rel: "noopener noreferrer" },
+        protocols: ["http", "https", "tel", "mailto"],
       }),
+      PullQuote,
+      LeedsImage,
+      Cta,
+      Abbreviation,
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -42,8 +54,7 @@ export function Editor({ value, onChange }: Props) {
     },
     editorProps: {
       attributes: {
-        class:
-          "min-h-[400px] max-w-none p-4 focus:outline-none prose-editor",
+        class: "min-h-[400px] max-w-none p-4 focus:outline-none prose-editor",
       },
     },
     immediatelyRender: false,
@@ -53,7 +64,9 @@ export function Editor({ value, onChange }: Props) {
     return (
       <div className="rounded-md border border-slate-300 dark:border-slate-700">
         <div className="border-b border-slate-200 dark:border-slate-800 px-3 py-2 h-[42px]" />
-        <div className="min-h-[400px] p-4 text-sm text-slate-400">Loading editor…</div>
+        <div className="min-h-[400px] p-4 text-sm text-slate-400">
+          Loading editor…
+        </div>
       </div>
     );
   }
@@ -78,6 +91,51 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   }, [editor]);
 
+  const setTelLink = useCallback(() => {
+    const phone = window.prompt(
+      "Phone number (digits and + only, no spaces)",
+      ""
+    );
+    if (!phone) return;
+    const cleaned = phone.replace(/[^0-9+]/g, "");
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: `tel:${cleaned}` })
+      .run();
+  }, [editor]);
+
+  const setAbbr = useCallback(() => {
+    const prev = editor.getAttributes("abbreviation").title ?? "";
+    const title = window.prompt(
+      "Full term (e.g. 'University of Leeds' for 'UoL'). Empty to remove.",
+      prev
+    );
+    if (title === null) return;
+    if (title === "") {
+      editor.chain().focus().unsetAbbreviation().run();
+      return;
+    }
+    editor.chain().focus().setAbbreviation({ title }).run();
+  }, [editor]);
+
+  const insertLeedsImage = useCallback(() => {
+    const src = window.prompt("Image URL", "");
+    if (!src) return;
+    const alt = window.prompt("Alt text (describe the image)", "") ?? "";
+    const caption = window.prompt("Caption (optional)", "") ?? "";
+    editor.chain().focus().setLeedsImage({ src, alt, caption }).run();
+  }, [editor]);
+
+  const insertCta = useCallback(() => {
+    const title = window.prompt("CTA heading", "");
+    if (!title) return;
+    const url = window.prompt("Link URL", "") ?? "#";
+    const text = window.prompt("Description text", "") ?? "";
+    editor.chain().focus().setCta({ title, url, text }).run();
+  }, [editor]);
+
   const setHeading = (v: string) => {
     if (v === "p") {
       editor.chain().focus().setParagraph().run();
@@ -88,6 +146,7 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
   };
 
   const currentBlock = (() => {
+    if (editor.isActive("pullQuote")) return "pullQuote";
     for (const l of [2, 3, 4, 5, 6]) {
       if (editor.isActive("heading", { level: l })) return `h${l}`;
     }
@@ -114,7 +173,7 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
       <ToolbarDivider />
 
       <select
-        value={currentBlock}
+        value={currentBlock === "pullQuote" ? "p" : currentBlock}
         onChange={(e) => setHeading(e.target.value)}
         className="rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         title="Format"
@@ -154,6 +213,13 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
         <Quote size={16} />
       </ToolbarButton>
       <ToolbarButton
+        title="Pull quote (UoL style)"
+        onClick={() => editor.chain().focus().setPullQuote().run()}
+        active={editor.isActive("pullQuote")}
+      >
+        <TextQuote size={16} />
+      </ToolbarButton>
+      <ToolbarButton
         title="Horizontal rule"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
       >
@@ -162,12 +228,11 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
 
       <ToolbarDivider />
 
-      <ToolbarButton
-        title="Add or edit link"
-        onClick={setLink}
-        active={editor.isActive("link")}
-      >
+      <ToolbarButton title="Add or edit link" onClick={setLink} active={editor.isActive("link")}>
         <LinkIcon size={16} />
+      </ToolbarButton>
+      <ToolbarButton title="Phone link (tel:)" onClick={setTelLink}>
+        <Phone size={16} />
       </ToolbarButton>
       <ToolbarButton
         title="Remove link"
@@ -175,6 +240,22 @@ function Toolbar({ editor }: { editor: TipTapEditor }) {
         disabled={!editor.isActive("link")}
       >
         <Unlink size={16} />
+      </ToolbarButton>
+
+      <ToolbarDivider />
+
+      <ToolbarButton title="Insert image" onClick={insertLeedsImage}>
+        <ImageIcon size={16} />
+      </ToolbarButton>
+      <ToolbarButton title="Insert call to action" onClick={insertCta}>
+        <Megaphone size={16} />
+      </ToolbarButton>
+      <ToolbarButton
+        title="Abbreviation"
+        onClick={setAbbr}
+        active={editor.isActive("abbreviation")}
+      >
+        <span className="text-[11px] font-bold tracking-wider">ABBR</span>
       </ToolbarButton>
 
       <ToolbarDivider />
@@ -217,7 +298,9 @@ function ToolbarButton({
       disabled={disabled}
       title={title}
       className={`rounded p-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed ${
-        active ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100" : ""
+        active
+          ? "bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+          : ""
       }`}
     >
       {children}
