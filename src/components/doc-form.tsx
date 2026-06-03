@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Editor } from "./editor";
+import { RawHtmlEditor } from "./raw-html-editor";
 import { CopyHtmlButton } from "./copy-html-button";
 import {
   RelatedLinksEditor,
@@ -28,6 +29,7 @@ export function DocForm({
   autoSave = false,
 }: Props) {
   const [html, setHtml] = useState(doc?.contentHtml ?? "");
+  const [rawHtml, setRawHtml] = useState(doc?.rawHtml ?? false);
   const [relatedLinks, setRelatedLinks] = useState(doc?.relatedLinks ?? []);
   const [relatedContent, setRelatedContent] = useState(
     doc?.relatedContent ?? []
@@ -39,16 +41,18 @@ export function DocForm({
   // Always read the LATEST state when we save. The previous version captured
   // the first-render closure in setInterval, so autosave kept POSTing the
   // original content — the preview "reset" you were seeing.
-  const stateRef = useRef({ html, relatedLinks, relatedContent, action });
+  const stateRef = useRef({ html, rawHtml, relatedLinks, relatedContent, action });
   useEffect(() => {
-    stateRef.current = { html, relatedLinks, relatedContent, action };
+    stateRef.current = { html, rawHtml, relatedLinks, relatedContent, action };
   });
 
   const persist = async () => {
     if (!formRef.current) return;
-    const { html, relatedLinks, relatedContent, action } = stateRef.current;
+    const { html, rawHtml, relatedLinks, relatedContent, action } =
+      stateRef.current;
     const fd = new FormData(formRef.current);
     fd.set("contentHtml", html);
+    fd.set("rawHtml", rawHtml ? "on" : "off");
     fd.set("relatedLinks", JSON.stringify(relatedLinks));
     fd.set("relatedContent", JSON.stringify(relatedContent));
     setStatus("saving");
@@ -79,7 +83,7 @@ export function DocForm({
     markDirty();
     // Intentionally not including markDirty since it's stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [html, relatedLinks, relatedContent, autoSave]);
+  }, [html, rawHtml, relatedLinks, relatedContent, autoSave]);
 
   // Autosave runs every 5 minutes. The interval just checks whether there
   // are unsaved changes (dirtyAt > 0) and persists if so. persist() clears
@@ -180,9 +184,53 @@ export function DocForm({
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="block text-sm font-medium">Content</label>
-          <CopyHtmlButton html={html} />
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!rawHtml) return;
+                  if (
+                    confirm(
+                      "Switch to the rich editor? It only understands the built-in components, so any custom or unrecognised HTML may be reformatted or removed when you edit. Your current HTML stays untouched until you make a change in rich mode."
+                    )
+                  ) {
+                    setRawHtml(false);
+                    markDirty();
+                  }
+                }}
+                className={`px-2.5 py-1 ${
+                  !rawHtml
+                    ? "bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                Rich editor
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (rawHtml) return;
+                  setRawHtml(true);
+                  markDirty();
+                }}
+                className={`px-2.5 py-1 border-l border-slate-300 dark:border-slate-700 ${
+                  rawHtml
+                    ? "bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                Raw HTML
+              </button>
+            </div>
+            <CopyHtmlButton html={html} />
+          </div>
         </div>
-        <Editor value={html} onChange={setHtml} />
+        {rawHtml ? (
+          <RawHtmlEditor value={html} onChange={setHtml} />
+        ) : (
+          <Editor value={html} onChange={setHtml} />
+        )}
         <label className="mt-2 flex items-center gap-2 text-sm">
           <input
             type="checkbox"

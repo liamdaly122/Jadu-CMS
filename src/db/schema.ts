@@ -38,6 +38,9 @@ export const documents = sqliteTable("documents", {
   withLead: integer("with_lead", { mode: "boolean" })
     .notNull()
     .default(true),
+  rawHtml: integer("raw_html", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),

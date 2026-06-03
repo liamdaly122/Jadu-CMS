@@ -51,6 +51,7 @@ const docSchema = z.object({
   metaDescription: z.string().trim().max(500).optional(),
   metaKeywords: z.string().trim().max(500).optional(),
   withLead: z.boolean().default(true),
+  rawHtml: z.boolean().default(false),
   relatedLinks: z.array(linkItem).default([]),
   relatedContent: z.array(contentItem).default([]),
 });
@@ -76,6 +77,7 @@ function parse(formData: FormData) {
     metaDescription: formData.get("metaDescription")?.toString() ?? "",
     metaKeywords: formData.get("metaKeywords")?.toString() ?? "",
     withLead: formData.get("withLead") === "on",
+    rawHtml: formData.get("rawHtml") === "on",
     relatedLinks: parseJson(formData.get("relatedLinks"), []),
     relatedContent: parseJson(formData.get("relatedContent"), []),
   };
@@ -108,6 +110,7 @@ export async function createDoc(formData: FormData) {
     metaDescription: data.metaDescription || null,
     metaKeywords: data.metaKeywords || null,
     withLead: data.withLead,
+    rawHtml: data.rawHtml,
     relatedLinks: data.relatedLinks,
     relatedContent: data.relatedContent,
   });
@@ -134,6 +137,7 @@ export async function updateDoc(id: string, formData: FormData) {
       metaDescription: data.metaDescription || null,
       metaKeywords: data.metaKeywords || null,
       withLead: data.withLead,
+      rawHtml: data.rawHtml,
       relatedLinks: data.relatedLinks,
       relatedContent: data.relatedContent,
       updatedAt: new Date(),

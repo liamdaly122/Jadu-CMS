@@ -1,0 +1,1 @@
+ALTER TABLE `documents` ADD `raw_html` integer DEFAULT false NOT NULL;
